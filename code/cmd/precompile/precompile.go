@@ -2,6 +2,7 @@ package precompile
 
 import (
 	"fmt"
+	yaml2 "github.com/haozzzzzzzz/go-rapid-development/utils/yaml"
 	"github.com/haozzzzzzzz/go-tool/code/com/precompiler"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -12,9 +13,10 @@ import (
 
 func CommandPrecompile() (cmd *cobra.Command) {
 	var path string
+	var paramsPath string
 	cmd = &cobra.Command{
 		Use:   "precompile",
-		Short: "precompile -p filepath [ key1=val1 key2=val2 ]",
+		Short: "precompile --path filepath [ --params_file params_filepath ] [ key1=val1 key2=val2 ]",
 		Run: func(cmd *cobra.Command, args []string) {
 			var err error
 			if path == "" {
@@ -29,6 +31,20 @@ func CommandPrecompile() (cmd *cobra.Command) {
 			}
 
 			params := make(map[string]interface{})
+
+			if paramsPath != "" {
+				paramsPath, err = filepath.Abs(paramsPath)
+				if nil != err {
+					logrus.Errorf("get abs params filepath failed. error: %s.", err)
+					return
+				}
+
+				err = yaml2.ReadYamlFromFile(paramsPath, &params)
+				if nil != err {
+					logrus.Errorf("read yaml from params file failed. error: %s.", err)
+					return
+				}
+			}
 
 			if len(args) > 0 {
 				strYamlText := ""
@@ -50,6 +66,8 @@ func CommandPrecompile() (cmd *cobra.Command) {
 				logrus.Printf("params: %#v\n", params)
 			}
 
+			fmt.Println(params)
+
 			err = precompiler.Precompile(path, params)
 			if nil != err {
 				logrus.Errorf("precompile failed. error: %s.", err)
@@ -59,7 +77,7 @@ func CommandPrecompile() (cmd *cobra.Command) {
 	}
 
 	flags := cmd.Flags()
-	flags.StringVarP(&path, "path", "p", "./", "precompile path, followed by key-value precompile params")
-
+	flags.StringVarP(&path, "path", "p", "./", "precompile path")
+	flags.StringVar(&paramsPath, "params", "", "params file path")
 	return
 }

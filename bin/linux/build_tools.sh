@@ -2,8 +2,11 @@
 export GOROOT=/usr/local/go
 export GOOS=linux
 
-# api project
-go build -o api ../../tools/api/main.go
+# api tool
+go build -o api ../../api/main.go
+
+# code tool
+go build -o code ../../code/main.go
 
 ## log formatter
 #go build -o logfmt ${GOPATH}/src/github.com/haozzzzzzzz/go-rapid-development/tools/logfmt/main.go
