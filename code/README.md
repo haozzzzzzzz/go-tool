@@ -99,7 +99,7 @@ Global Flags:
 
   finally platform will be `ec2`
 
-- Precompiled file will create an new file without ".pre.go" suffix.
+- Precompiled file will create an new file without ".pre.go" suffix, and add `+build ignore` constraint to original `.pre.go`file。
 
   ```go
   //xray.go
