@@ -1,8 +1,8 @@
-# The `code` is a CLI library for Go source code developing
+# The `code` is a CLI library for go code developing
 
 
 ```sh
-code is a CLI library for Go source code developing.
+code is a CLI library for go code developing.
 
 Usage:
   code [command]

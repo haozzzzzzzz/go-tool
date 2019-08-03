@@ -30,7 +30,7 @@ var cfgFile string
 var rootCmd = &cobra.Command{
 	Use:   "code",
 	Short: "go source tool",
-	Long:  `code is a CLI library for Go source code developing.`,
+	Long:  `code is a CLI library for go code developing.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
