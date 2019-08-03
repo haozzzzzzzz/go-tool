@@ -29,4 +29,4 @@ require (
 	gopkg.in/yaml.v2 v2.2.2
 )
 
-replace github.com/haozzzzzzzz/go-rapid-development v0.1.7 => /Users/hao/Documents/Projects/Github/go-rapid-development
+// replace github.com/haozzzzzzzz/go-rapid-development v0.1.7 => /Users/hao/Documents/Projects/Github/go-rapid-development
