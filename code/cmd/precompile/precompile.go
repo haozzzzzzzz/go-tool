@@ -63,10 +63,11 @@ func CommandPrecompile() (cmd *cobra.Command) {
 					return
 				}
 
-				logrus.Printf("params: %#v\n", params)
 			}
 
-			fmt.Println(params)
+			if len(params) > 0 {
+				logrus.Printf("params: %#v\n", params)
+			}
 
 			err = precompiler.Precompile(path, params)
 			if nil != err {
