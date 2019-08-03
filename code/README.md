@@ -1,4 +1,4 @@
-#The `code` is a CLI library for Go source code developing
+# The `code` is a CLI library for Go source code developing
 
 
 ```sh
