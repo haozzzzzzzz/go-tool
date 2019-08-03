@@ -15,8 +15,8 @@ limitations under the License.
 */
 package main
 
-import "code/cmd"
+import "github.com/haozzzzzzzz/go-tool/code/cmd"
 
 func main() {
-  cmd.Execute()
+	cmd.Execute()
 }
