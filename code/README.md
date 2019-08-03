@@ -46,7 +46,7 @@ Global Flags:
 
 - Add an `+pre` directive in comment line to declare an precompile statement.
 
-- Add Lua syntax rules script to make precompile statement.
+- Add Lua syntax rules script to make precompile statement. 
 
   ```go
   import (
@@ -74,13 +74,13 @@ Global Flags:
   )
   ```
 
-- Use cli cmd to precompile
+- Use cli cmd to precompile. Params type support string、number、boolean.
 
   ```sh
   code precompile -p path_to_dir_or_file platform=ec2
   ```
 
-- Or you can specify an params file path
+- Or you can specify an params file path. 
 
   ```yaml
   // params.yaml
