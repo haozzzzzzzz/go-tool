@@ -13,7 +13,7 @@ require (
 	github.com/go-playground/universal-translator v0.16.0 // indirect
 	github.com/go-playground/validator v9.29.1+incompatible
 	github.com/gosexy/to v0.0.0-20141221203644-c20e083e3123
-	github.com/haozzzzzzzz/go-rapid-development v0.1.7
+	github.com/haozzzzzzzz/go-rapid-development v0.1.8
 	github.com/leodido/go-urn v1.1.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
