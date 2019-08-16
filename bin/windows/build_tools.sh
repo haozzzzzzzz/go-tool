@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 export GOROOT=/usr/local/go
 export GOOS=windows
+export GOARCH=amd64
 
 # api tool
 go build -o api.exe ../../api/main.go
