@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 
 	"github.com/haozzzzzzzz/go-tool/api/com/parser"
-	"github.com/haozzzzzzzz/go-tool/api/com/project"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -28,15 +27,8 @@ func CommandApiCompile() *cobra.Command {
 				return
 			}
 
-			// service
-			service, err := project.LoadService(serviceDir)
-			if nil != err {
-				logrus.Errorf("load service failed. %s.", err)
-				return
-			}
-
 			// api parser
-			apiParser := parser.NewApiParser(service)
+			apiParser := parser.NewApiParser(serviceDir)
 			apis, err := apiParser.ScanApis(false, !notMod)
 			if nil != err {
 				logrus.Errorf("Scan api failed. \n%s.", err)

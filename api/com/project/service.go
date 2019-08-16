@@ -13,6 +13,7 @@ import (
 	"gopkg.in/go-playground/validator.v9"
 )
 
+// 废弃
 type ServiceType string
 
 const (

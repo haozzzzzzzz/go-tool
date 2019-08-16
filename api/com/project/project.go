@@ -11,10 +11,6 @@ import (
 	"gopkg.in/go-playground/validator.v9"
 )
 
-const ProjectFileMode os.FileMode = os.ModePerm ^ 0111
-
-const ProjectDirMode os.FileMode = os.ModePerm
-
 type ProjectConfigFormat struct {
 	Name       string `json:"name" yaml:"name" validate:"required"`
 	ProjectDir string `json:"project_dir" yaml:"project_dir" validate:"required"`

@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
+	"github.com/haozzzzzzzz/go-tool/api/com/project"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 
@@ -12,23 +13,20 @@ import (
 
 	"os"
 
-	"github.com/haozzzzzzzz/go-tool/api/com/project"
 	"github.com/sirupsen/logrus"
 )
 
 type ApiParser struct {
-	Service    *project.Service
 	ServiceDir string
 	ApiDir     string
 	GoPaths    []string
 }
 
-func NewApiParser(service *project.Service) *ApiParser {
+func NewApiParser(serviceDir string) *ApiParser {
 	goPath := os.Getenv("GOPATH")
 	return &ApiParser{
-		Service:    service,
-		ServiceDir: service.Config.ServiceDir,
-		ApiDir:     fmt.Sprintf("%s/api", service.Config.ServiceDir),
+		ServiceDir: serviceDir,
+		ApiDir:     fmt.Sprintf("%s/api", serviceDir),
 		GoPaths:    strings.Split(goPath, ":"),
 	}
 }
@@ -119,7 +117,10 @@ func (m *ApiParser) GenerateRoutersSourceFile(apis []*ApiItem) (err error) {
 	return
 }
 
-func (m *ApiParser) SaveApisToFile(apis []*ApiItem) (err error) {
+func (m *ApiParser) SaveApisToFile(
+	apis []*ApiItem,
+	filePath string,
+) (err error) {
 	logrus.Info("Save apis ...")
 	defer func() {
 		if err == nil {
@@ -130,15 +131,16 @@ func (m *ApiParser) SaveApisToFile(apis []*ApiItem) (err error) {
 	// save api.yaml
 	byteYamlApis, err := yaml.Marshal(apis)
 	if nil != err {
-		logrus.Errorf("yaml marshal apis failed. \n%s.", byteYamlApis)
+		logrus.Errorf("yaml marshal apis failed. %s.", byteYamlApis)
 		return
 	}
 
-	err = ioutil.WriteFile(fmt.Sprintf("%s/.service/apis.yaml", m.ServiceDir), byteYamlApis, 0644)
+	err = ioutil.WriteFile(filePath, byteYamlApis, project.ProjectFileMode)
 	if nil != err {
-		logrus.Errorf("write apis.yaml failed. \n%s.", err)
+		logrus.Errorf("write apis.yaml failed. %s.", err)
 		return
 	}
+
 	return
 }
 

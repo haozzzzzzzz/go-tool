@@ -5,17 +5,21 @@ import (
 	"path/filepath"
 
 	"github.com/haozzzzzzzz/go-tool/api/com/parser"
-	"github.com/haozzzzzzzz/go-tool/api/com/project"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 func GenerateApiDoc() *cobra.Command {
-	var serviceDir string
+	var serviceDir string // 服务目录
+	var outputDir string
+
 	var host string
 	var version string
 	var contactName string
 	var notMod bool
+	var serviceName string
+	var serviceDescription string
+
 	var cmd = &cobra.Command{
 		Use:   "doc",
 		Short: "api doc generate",
@@ -28,29 +32,28 @@ func GenerateApiDoc() *cobra.Command {
 			var err error
 			serviceDir, err = filepath.Abs(serviceDir)
 			if nil != err {
-				logrus.Errorf("get absolute service path failed. \ns%s.", err)
+				logrus.Errorf("get absolute service path failed. err: %s.", err)
 				return
 			}
 
-			// service
-			service, err := project.LoadService(serviceDir)
+			outputDir, err = filepath.Abs(outputDir)
 			if nil != err {
-				logrus.Errorf("load service failed. %s.", err)
+				logrus.Errorf("get abs output path failed. error: %s.", err)
 				return
 			}
 
 			// api parser
-			apiParser := parser.NewApiParser(service)
+			apiParser := parser.NewApiParser(serviceDir)
 			apis, err := apiParser.ScanApis(true, !notMod)
 			if nil != err {
-				logrus.Errorf("Scan api failed. \n%s.", err)
+				logrus.Errorf("Scan api failed. err: %s.", err)
 				return
 			}
 
 			swaggerSpec := parser.NewSwaggerSpec()
 			swaggerSpec.Info(
-				service.Config.Name,
-				service.Config.Description,
+				serviceName,
+				serviceDescription,
 				version,
 				contactName,
 			)
@@ -58,40 +61,42 @@ func GenerateApiDoc() *cobra.Command {
 			swaggerSpec.Apis(apis)
 			swaggerSpec.Schemes([]string{"http", "https"})
 			err = swaggerSpec.ParseApis()
-			err = swaggerSpec.SaveToFile(fmt.Sprintf("%s/.service/swagger.json", service.Config.ServiceDir))
+			err = swaggerSpec.SaveToFile(fmt.Sprintf("%s/swagger.json", outputDir))
 			if nil != err {
 				logrus.Errorf("save swagger spec to file failed. error: %s.", err)
 				return
 			}
 
-			err = apiParser.SaveApisToFile(apis)
+			err = apiParser.SaveApisToFile(apis, fmt.Sprintf("%s/apis.yaml", outputDir))
 			if nil != err {
-				logrus.Errorf("save apis to file failed. %s.", err)
+				logrus.Errorf("save apis to file failed. err: %s.", err)
 				return
 			}
-
 		},
 	}
 
 	flags := cmd.Flags()
 	flags.StringVarP(&serviceDir, "path", "p", "./", "service path")
+	flags.StringVarP(&serviceName, "name", "n", "service name", "service name")
+	flags.StringVarP(&serviceDescription, "desc", "d", "description", "description")
 	flags.StringVarP(&host, "host", "H", "", "api host")
 	flags.StringVarP(&version, "version", "v", "1.0", "api version")
 	flags.StringVarP(&contactName, "contact_name", "c", "", "contact name")
-	flags.BoolVarP(&notMod, "not_mod", "n", false, "not mod")
+	flags.BoolVarP(&notMod, "not_mod", "N", false, "not mod")
+	flags.StringVarP(&outputDir, "output", "o", "./", "doc output path")
 	return cmd
 }
 
 func GenerateCommentDoc() (cmd *cobra.Command) {
 	var dir string
-	var outputPath string
+	var outputDir string
 	var host string
 	cmd = &cobra.Command{
 		Use:   "com_doc",
 		Short: "generate open api doc from comment",
 		Run: func(cmd *cobra.Command, args []string) {
 			var err error
-			if dir == "" || outputPath == "" {
+			if dir == "" || outputDir == "" {
 				logrus.Errorf("invalid params")
 				return
 			}
@@ -102,7 +107,7 @@ func GenerateCommentDoc() (cmd *cobra.Command) {
 				return
 			}
 
-			outputPath, err = filepath.Abs(outputPath)
+			outputDir, err = filepath.Abs(outputDir)
 			if nil != err {
 				logrus.Errorf("get abs output path failed. error: %s.", err)
 				return
@@ -125,7 +130,7 @@ func GenerateCommentDoc() (cmd *cobra.Command) {
 			swaggerSpec.Apis(apis)
 			swaggerSpec.Schemes([]string{"http", "https"})
 			err = swaggerSpec.ParseApis()
-			err = swaggerSpec.SaveToFile(outputPath)
+			err = swaggerSpec.SaveToFile(fmt.Sprintf("%s/swagger.json", outputDir))
 			if nil != err {
 				logrus.Errorf("save swagger spec to file failed. error: %s.", err)
 				return
@@ -136,7 +141,7 @@ func GenerateCommentDoc() (cmd *cobra.Command) {
 	}
 	flags := cmd.Flags()
 	flags.StringVarP(&dir, "dir", "d", "./", "search directory")
-	flags.StringVarP(&outputPath, "output", "o", "./swagger.json", "swagger json output path")
+	flags.StringVarP(&outputDir, "output", "o", "./", "doc output dir")
 	flags.StringVarP(&host, "host", "H", "", "host")
 	return
 }

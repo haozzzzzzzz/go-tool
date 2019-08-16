@@ -46,7 +46,7 @@ var (
 func init() {
 	var err error
 
-	Namespace = config.ServiceConfig.Namespace
+	Namespace = config.ServiceParams.Namespace
 	Ec2InstanceId = config.AWSEc2InstanceIdentifyDocument.InstanceID
 }
 `

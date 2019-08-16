@@ -398,24 +398,24 @@ type ServiceConfigFormat struct {
 	Namespace string ` + "`json:\"metrics_namespace\" yaml:\"metrics_namespace\" validate:\"required\"`" + `
 }
 
-var ServiceConfig *ServiceConfigFormat
+var ServiceParams *ServiceConfigFormat
 
 func CheckServiceConfig() {
-	if ServiceConfig != nil {
+	if ServiceParams != nil {
 		return
 	}
 
 	CheckConsulConfig()
 
-	ServiceConfig = &ServiceConfigFormat{}
+	ServiceParams = &ServiceConfigFormat{}
 	var err error
-	err = GetConsulClient().GetYaml(ConsulConfig.KeyPrefix+"/service.yaml", ServiceConfig)
+	err = GetConsulClient().GetYaml(ConsulConfig.KeyPrefix+"/service.yaml", ServiceParams)
 	if nil != err {
 		logrus.Fatalf("read service config file failed. %s", err)
 		return
 	}
 
-	err = validator.New().Struct(ServiceConfig)
+	err = validator.New().Struct(ServiceParams)
 	if nil != err {
 		logrus.Errorf("validate service config failed. %s.", err)
 		return
@@ -437,7 +437,7 @@ func CheckSessionConfig() {
 	CheckAWSConfig()
 	CheckServiceConfig()
 
-	err = session.InitMetrics(ServiceConfig.Namespace, AWSEc2InstanceIdentifyDocument.InstanceID)
+	err = session.InitMetrics(ServiceParams.Namespace, AWSEc2InstanceIdentifyDocument.InstanceID)
 	if nil != err {
 		logrus.Fatalf("init session metrics failed. error: %s.", err)
 		return
@@ -458,7 +458,7 @@ func CheckHttpConfig() {
 	CheckAWSConfig()
 	CheckServiceConfig()
 
-	err = http.InitMetrics(ServiceConfig.Namespace, AWSEc2InstanceIdentifyDocument.InstanceID)
+	err = http.InitMetrics(ServiceParams.Namespace, AWSEc2InstanceIdentifyDocument.InstanceID)
 	if nil != err {
 		logrus.Fatalf("init http remote request metrics failed. %s", err)
 		return
