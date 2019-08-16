@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func GenerateApiDoc() *cobra.Command {
+func GenerateSwaggerSpecification() *cobra.Command {
 	var serviceDir string // 服务目录
 	var outputDir string
 
@@ -21,8 +21,8 @@ func GenerateApiDoc() *cobra.Command {
 	var serviceDescription string
 
 	var cmd = &cobra.Command{
-		Use:   "doc",
-		Short: "api doc generate",
+		Use:   "swagger",
+		Short: "swagger specification generate",
 		Run: func(cmd *cobra.Command, args []string) {
 			if serviceDir == "" {
 				logrus.Errorf("service dir required")
@@ -84,16 +84,17 @@ func GenerateApiDoc() *cobra.Command {
 	flags.StringVarP(&contactName, "contact_name", "c", "", "contact name")
 	flags.BoolVarP(&notMod, "not_mod", "N", false, "not mod")
 	flags.StringVarP(&outputDir, "output", "o", "./", "doc output path")
+
 	return cmd
 }
 
-func GenerateCommentDoc() (cmd *cobra.Command) {
+func GenerateCommentSwagger() (cmd *cobra.Command) {
 	var dir string
 	var outputDir string
 	var host string
 	cmd = &cobra.Command{
-		Use:   "com_doc",
-		Short: "generate open api doc from comment",
+		Use:   "com_swagger",
+		Short: "generate swagger specification from comment",
 		Run: func(cmd *cobra.Command, args []string) {
 			var err error
 			if dir == "" || outputDir == "" {
@@ -139,6 +140,7 @@ func GenerateCommentDoc() (cmd *cobra.Command) {
 			return
 		},
 	}
+
 	flags := cmd.Flags()
 	flags.StringVarP(&dir, "dir", "d", "./", "search directory")
 	flags.StringVarP(&outputDir, "output", "o", "./", "doc output dir")
