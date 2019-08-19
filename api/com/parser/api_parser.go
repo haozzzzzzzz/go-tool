@@ -37,7 +37,7 @@ func (m *ApiParser) ParseRouter(
 ) (err error) {
 	apis, err := m.ScanApis(parseRequestData, importSource)
 	if nil != err {
-		logrus.Errorf("Scan api failed. \n%s.", err)
+		logrus.Errorf("Scan api failed. %s.", err)
 		return
 	}
 

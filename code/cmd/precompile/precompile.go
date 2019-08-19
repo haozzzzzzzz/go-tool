@@ -1,12 +1,14 @@
 package precompile
 
 import (
+	"errors"
 	"fmt"
 	yaml2 "github.com/haozzzzzzzz/go-rapid-development/utils/yaml"
 	"github.com/haozzzzzzzz/go-tool/code/com/precompiler"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -19,8 +21,15 @@ func CommandPrecompile() (cmd *cobra.Command) {
 		Short: "precompile --path filepath [ --params_file params_filepath ] [ key1=val1 key2=val2 ]",
 		Run: func(cmd *cobra.Command, args []string) {
 			var err error
+			defer func() {
+				if err != nil {
+					os.Exit(1)
+				}
+			}()
+
 			if path == "" {
-				logrus.Errorf("require path")
+				err = errors.New("require path")
+				logrus.Error(err)
 				return
 			}
 

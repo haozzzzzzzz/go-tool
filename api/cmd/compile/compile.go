@@ -1,6 +1,7 @@
 package compile
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/haozzzzzzzz/go-tool/api/com/parser"
@@ -15,12 +16,19 @@ func CommandApiCompile() *cobra.Command {
 		Use:   "compile",
 		Short: "api service compilation",
 		Run: func(cmd *cobra.Command, args []string) {
+			var err error
+
+			defer func() {
+				if err != nil {
+					os.Exit(1)
+				}
+			}()
+
 			if serviceDir == "" {
 				logrus.Errorf("service dir required")
 				return
 			}
 
-			var err error
 			serviceDir, err = filepath.Abs(serviceDir)
 			if nil != err {
 				logrus.Errorf("get absolute service path failed. \ns%s.", err)
@@ -31,7 +39,7 @@ func CommandApiCompile() *cobra.Command {
 			apiParser := parser.NewApiParser(serviceDir)
 			apis, err := apiParser.ScanApis(false, !notMod)
 			if nil != err {
-				logrus.Errorf("Scan api failed. \n%s.", err)
+				logrus.Errorf("Scan api failed. %s.", err)
 				return
 			}
 
