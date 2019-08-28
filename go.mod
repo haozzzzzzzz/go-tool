@@ -9,12 +9,9 @@ require (
 	github.com/gin-contrib/cors v1.3.0
 	github.com/gin-gonic/gin v1.4.1-0.20190727010637-461df9320ac2
 	github.com/go-openapi/spec v0.19.2
-	github.com/go-playground/locales v0.12.1 // indirect
-	github.com/go-playground/universal-translator v0.16.0 // indirect
 	github.com/go-playground/validator v9.29.1+incompatible
 	github.com/gosexy/to v0.0.0-20141221203644-c20e083e3123
-	github.com/haozzzzzzzz/go-rapid-development v0.1.8
-	github.com/leodido/go-urn v1.1.0 // indirect
+	github.com/haozzzzzzzz/go-rapid-development v0.1.15
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/pkg/errors v0.8.1
