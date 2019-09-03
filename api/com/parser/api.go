@@ -17,6 +17,10 @@ func (m *Field) TagJson() (name string) {
 	return m.Tags["json"]
 }
 
+func (m *Field) TagForm() (name string) {
+	return m.Tags["json"]
+}
+
 func (m *Field) Required() (required bool) {
 	strBind := m.Tags["binding"]
 	if strings.Contains(strBind, "required") {

@@ -257,7 +257,7 @@ func ParsePkgApis(
 
 		}
 
-	} else {
+	} else { // use go mod
 		mode := packages.NeedName |
 			packages.NeedFiles |
 			packages.NeedCompiledGoFiles |
@@ -288,6 +288,7 @@ func ParsePkgApis(
 				continue
 			}
 
+			//fmt.Println(pkg.PkgPath)
 			pkgPath[pkg.PkgPath] = true
 
 			// 合并types.Info
@@ -296,6 +297,7 @@ func ParsePkgApis(
 				astFileNames[astFile] = pkg.Fset.File(astFile.Pos()).Name()
 			}
 
+			// 包内的类型
 			mergeTypesInfos(typesInfo, pkg.TypesInfo)
 
 			if parseRequestData {
@@ -306,6 +308,9 @@ func ParsePkgApis(
 					}
 
 					impPkgPaths[impPkg.PkgPath] = true
+
+					//fmt.Println(impPkg.PkgPath)
+					// 包引用的包的类型，目前只解析一层
 					mergeTypesInfos(typesInfo, impPkg.TypesInfo)
 				}
 			}
@@ -548,8 +553,6 @@ func parseType(
 ) (iType IType) {
 	iType = NewBasicType("Unsupported")
 
-	//fmt.Println(t.String())
-	//fmt.Println()
 	switch t.(type) {
 	case *types.Basic:
 		iType = NewBasicType(t.(*types.Basic).Name())
@@ -574,8 +577,32 @@ func parseType(
 		tStructType := t.(*types.Struct)
 
 		typeAstExpr := FindStructAstExprFromInfoTypes(info, tStructType)
-		if typeAstExpr == nil {
-			logrus.Warnf("cannot found expr of type: %s", tStructType)
+		if typeAstExpr == nil { // 不在当前源码内的定义会解析不到
+			hasFieldsJsonTag := false
+
+			numFields := tStructType.NumFields()
+			for i := 0; i <= numFields; i++ {
+				strTag := tStructType.Tag(i)
+				mTagParts := parseStringTagParts(strTag)
+				if len(mTagParts) == 0 {
+					continue
+				}
+
+				for key, _ := range mTagParts {
+					if key == "json" {
+						hasFieldsJsonTag = true
+						break
+					}
+				}
+
+				if hasFieldsJsonTag {
+					break
+				}
+			}
+
+			if hasFieldsJsonTag { // 有导出的jsontag，但是找不到定义的
+				logrus.Warnf("cannot found expr of type: %s", tStructType)
+			}
 		}
 
 		numFields := tStructType.NumFields()
@@ -619,16 +646,7 @@ func parseType(
 			}
 
 			// tags
-			tagValue := strings.Replace(tStructType.Tag(i), "`", "", -1)
-			strPairs := strings.Split(tagValue, " ")
-			for _, pair := range strPairs {
-				if pair == "" {
-					continue
-				}
-
-				tagPair := strings.Split(pair, ":")
-				field.Tags[tagPair[0]] = strings.Replace(tagPair[1], "\"", "", -1)
-			}
+			field.Tags = parseStringTagParts(tStructType.Tag(i))
 
 			// definition
 			field.Name = tField.Name()
@@ -668,6 +686,23 @@ func parseType(
 
 	}
 	return
+}
+
+func parseStringTagParts(strTag string) (mParts map[string]string) {
+	mParts = make(map[string]string, 0)
+	tagValue := strings.Replace(strTag, "`", "", -1)
+	strPairs := strings.Split(tagValue, " ")
+	for _, pair := range strPairs {
+		pair = strings.TrimSpace(pair)
+		if pair == "" {
+			continue
+		}
+
+		tagPair := strings.Split(pair, ":")
+		mParts[tagPair[0]] = strings.Replace(tagPair[1], "\"", "", -1)
+	}
+	return
+
 }
 
 func convertExpr(expr ast.Expr) (newExpr ast.Expr) {
