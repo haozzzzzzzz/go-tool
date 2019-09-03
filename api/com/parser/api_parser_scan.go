@@ -536,7 +536,7 @@ func parseApiRequest(
 	if iType != nil {
 		dataType, _ = iType.(*StructType)
 	} else {
-		logrus.Warnf("parse api request nill: %#v\n", typeVar)
+		logrus.Warnf("parse api request nil: %#v\n", typeVar)
 	}
 
 	return
@@ -548,6 +548,8 @@ func parseType(
 ) (iType IType) {
 	iType = NewBasicType("Unsupported")
 
+	//fmt.Println(t.String())
+	//fmt.Println()
 	switch t.(type) {
 	case *types.Basic:
 		iType = NewBasicType(t.(*types.Basic).Name())
@@ -573,7 +575,7 @@ func parseType(
 
 		typeAstExpr := FindStructAstExprFromInfoTypes(info, tStructType)
 		if typeAstExpr == nil {
-			logrus.Warnf("cannot found expr of type: %s", tStructType.String())
+			logrus.Warnf("cannot found expr of type: %s", tStructType)
 		}
 
 		numFields := tStructType.NumFields()
@@ -586,10 +588,9 @@ func parseType(
 			}
 
 			if typeAstExpr != nil { // 找到声明
-
 				astStructType, ok := typeAstExpr.(*ast.StructType)
 				if !ok {
-					logrus.Printf("parse struct type failed. expr: %s, type: %#v\n\n\n\n\n", typeAstExpr, tStructType)
+					logrus.Printf("parse struct type failed. expr: %#v, type: %#v", typeAstExpr, tStructType)
 					return
 				}
 
@@ -694,17 +695,18 @@ func FindStructAstExprFromInfoTypes(info *types.Info, t *types.Struct) (expr ast
 			continue
 		}
 
-		if t == tStruct { // 同一组astFiles生成的Types，内存中对象匹配成功
+		if t == tStruct {
+			// 同一组astFiles生成的Types，内存中对象匹配成功
 			expr = tExpr
-			break
-		}
 
-		if t.String() == tStruct.String() { // 如果是不同的astFiles生成的Types，可能astFile1中没有这个类型信息，但是另外一组astFiles导入到info里，这是同一个类型，内存对象不一样，但是整体结构是一样的
+		} else if t.String() == tStruct.String() {
+			// 如果是不同的astFiles生成的Types，可能astFile1中没有这个类型信息，但是另外一组astFiles导入到info里，这是同一个类型，内存对象不一样，但是整体结构是一样的
+			// 不是百分百准确
 			expr = tExpr
-			break
-		}
 
-		if tStruct.NumFields() == t.NumFields() {
+		} else if tStruct.NumFields() == t.NumFields() {
+			// 字段一样
+
 			numFields := tStruct.NumFields()
 			notMatch := false
 			for i := 0; i < numFields; i++ {
@@ -714,12 +716,15 @@ func FindStructAstExprFromInfoTypes(info *types.Info, t *types.Struct) (expr ast
 				}
 			}
 
-			if notMatch == false {
+			if notMatch == false { // 字段一样
 				expr = tExpr
-				break
 			}
 		}
 
+		_, isStructExpr := expr.(*ast.StructType)
+		if isStructExpr {
+			break
+		}
 	}
 
 	return
