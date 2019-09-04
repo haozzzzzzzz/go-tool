@@ -393,7 +393,6 @@ func ParsePkgApis(
 				continue
 			}
 
-			fmt.Printf("%#v\n", mapApiObjTypes[obj])
 			_ = objName
 			selectorExpr, ok := valueSpec.Type.(*ast.SelectorExpr)
 			if !ok {
@@ -410,6 +409,12 @@ func ParsePkgApis(
 			if xIdent.Name != "ginbuilder" && selIdent.Name != "HandleFunc" {
 				continue
 			}
+
+			apiType, ok := mapApiObjTypes[obj]
+			if !ok {
+				logrus.Warnf("failed to find types of api ast ident. %s", obj)
+			}
+			_ = apiType
 
 			apiItem := &ApiItem{
 				SourceFile:          fileName,
