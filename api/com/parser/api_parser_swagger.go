@@ -21,8 +21,9 @@ import (
 )
 
 type SwaggerSpec struct {
-	apis    []*ApiItem
-	Swagger *lswagger.Swagger
+	commonParams *ApiItemParams
+	apis         []*ApiItem
+	Swagger      *lswagger.Swagger
 }
 
 func NewSwaggerSpec() (swgSpec *SwaggerSpec) {
@@ -155,7 +156,8 @@ func (m *SwaggerSpec) parseApi(path string, api *ApiItem) (err error) {
 }
 
 // set apis for building swagger spec
-func (m *SwaggerSpec) Apis(apis []*ApiItem) {
+func (m *SwaggerSpec) Apis(commonParams *ApiItemParams, apis []*ApiItem) {
+	m.commonParams = commonParams
 	m.apis = apis
 }
 

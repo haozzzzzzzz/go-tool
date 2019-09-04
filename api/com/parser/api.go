@@ -141,7 +141,17 @@ func (m *InterfaceType) TypeName() string {
 	return m.TypeClass
 }
 
+type ApiItemParams struct {
+	HeaderData *StructType `json:"header_data" yaml:"header_data"`
+	UriData    *StructType `json:"uri_data" yaml:"uri_data"`
+	QueryData  *StructType `json:"query_data" yaml:"query_data"`
+	PostData   *StructType `json:"post_data" yaml:"post_data"`
+	RespData   *StructType `json:"response_data" yaml:"response_data"`
+}
+
 type ApiItem struct {
+	ApiItemParams
+
 	ApiHandlerFunc string `validate:"required" json:"api_handler_func" yaml:"api_handler_func"` // handler 函数名
 	SourceFile     string `validate:"required" json:"source_file" yaml:"source_file"`           // 源码
 
@@ -152,12 +162,6 @@ type ApiItem struct {
 
 	HttpMethod    string   `validate:"required" json:"http_method" yaml:"http_method"`
 	RelativePaths []string `validate:"required" json:"relative_paths" yaml:"relative_paths"`
-
-	HeaderData *StructType `json:"header_data" yaml:"header_data"`
-	UriData    *StructType `json:"uri_data" yaml:"uri_data"`
-	QueryData  *StructType `json:"query_data" yaml:"query_data"`
-	PostData   *StructType `json:"post_data" yaml:"post_data"`
-	RespData   *StructType `json:"response_data" yaml:"response_data"`
 
 	Summary     string `json:"summary" yaml:"summary"` // TODO fill summary
 	Description string `json:"description" yaml:"description"`

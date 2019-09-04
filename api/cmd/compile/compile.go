@@ -36,8 +36,13 @@ func CommandApiCompile() *cobra.Command {
 			}
 
 			// api parser
-			apiParser := parser.NewApiParser(serviceDir)
-			apis, err := apiParser.ScanApis(false, !notMod)
+			apiParser, err := parser.NewApiParser(serviceDir)
+			if nil != err {
+				logrus.Errorf("new api parser failed. error: %s.", err)
+				return
+			}
+
+			_, apis, err := apiParser.ScanApis(false, false, !notMod)
 			if nil != err {
 				logrus.Errorf("Scan api failed. %s.", err)
 				return

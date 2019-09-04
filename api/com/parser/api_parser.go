@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"github.com/haozzzzzzzz/go-rapid-development/utils/file"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
 	"github.com/haozzzzzzzz/go-tool/api/com/project"
 	"gopkg.in/yaml.v2"
@@ -22,33 +23,47 @@ type ApiParser struct {
 	GoPaths    []string
 }
 
-func NewApiParser(serviceDir string) *ApiParser {
+func NewApiParser(serviceDir string) (apiParser *ApiParser, err error) {
+	apiDir := fmt.Sprintf("%s/api", serviceDir)
+
+	if file.PathExists(apiDir) {
+		err = os.MkdirAll(apiDir, project.ProjectDirMode)
+		if nil != err {
+			logrus.Errorf("mkdir %s failed. error: %s.", apiDir, err)
+			return
+		}
+
+	}
+
 	goPath := os.Getenv("GOPATH")
-	return &ApiParser{
+
+	apiParser = &ApiParser{
 		ServiceDir: serviceDir,
-		ApiDir:     fmt.Sprintf("%s/api", serviceDir),
+		ApiDir:     apiDir,
 		GoPaths:    strings.Split(goPath, ":"),
-	}
-}
-
-func (m *ApiParser) ParseRouter(
-	parseRequestData bool,
-	importSource bool,
-) (err error) {
-	apis, err := m.ScanApis(parseRequestData, importSource)
-	if nil != err {
-		logrus.Errorf("Scan api failed. %s.", err)
-		return
-	}
-
-	err = m.GenerateRoutersSourceFile(apis)
-	if nil != err {
-		logrus.Errorf("map api failed. %s.", err)
-		return
 	}
 
 	return
 }
+
+//func (m *ApiParser) ParseRouter(
+//	parseRequestData bool,
+//	importSource bool,
+//) (err error) {
+//	_, apis, err := m.ScanApis(parseRequestData, importSource)
+//	if nil != err {
+//		logrus.Errorf("Scan api failed. %s.", err)
+//		return
+//	}
+//
+//	err = m.GenerateRoutersSourceFile(apis)
+//	if nil != err {
+//		logrus.Errorf("map api failed. %s.", err)
+//		return
+//	}
+//
+//	return
+//}
 
 func (m *ApiParser) apiUrlKey(uri string, method string) string {
 	return fmt.Sprintf("%s_%s", uri, method)

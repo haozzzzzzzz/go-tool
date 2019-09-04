@@ -29,15 +29,14 @@ import (
 
 func (m *ApiParser) ScanApis(
 	parseRequestData bool, // 如果parseRequestData会有点慢
+	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
 	useMod bool, // parseRequestData=true时，生效
-) (apis []*ApiItem, err error) {
+) (
+	commonParams *ApiItemParams,
+	apis []*ApiItem,
+	err error,
+) {
 	apis = make([]*ApiItem, 0)
-	logrus.Info("Scan api files...")
-	defer func() {
-		if err == nil {
-			logrus.Info("Scan api files completed")
-		}
-	}()
 
 	// scan api dir
 	apiDir, err := filepath.Abs(m.ApiDir)
@@ -46,29 +45,13 @@ func (m *ApiParser) ScanApis(
 		return
 	}
 
-	// api文件夹中所有的文件
-	subApiDir := make([]string, 0)
-	subApiDir, err = file.SearchFileNames(apiDir, func(fileInfo os.FileInfo) bool {
-		if fileInfo.IsDir() {
-			return true
-		} else {
-			return false
-		}
-
-	}, true)
-	subApiDir = append(subApiDir, apiDir)
-
-	// 服务源文件，只能一个pkg一个pkg地解析
-	for _, subApiDir := range subApiDir {
-		subApis, errParse := ParsePkgApis(apiDir, subApiDir, useMod, parseRequestData)
-		err = errParse
-		if nil != err {
-			logrus.Errorf("parse api file dir %q failed. error: %s.", subApiDir, err)
-			return
-		}
-
-		apis = append(apis, subApis...)
+	codeApis, err := ParseApis(apiDir, parseRequestData, parseCommentText, useMod)
+	if nil != err {
+		logrus.Errorf("parse apis from code failed. error: %s.", err)
+		return
 	}
+
+	apis = append(apis, codeApis...)
 
 	// sort api
 	sortedApiUriKeys := make([]string, 0)
@@ -94,6 +77,47 @@ func (m *ApiParser) ScanApis(
 	}
 
 	apis = sortedApis
+	return
+}
+
+func ParseApis(
+	apiDir string,
+	parseRequestData bool, // 如果parseRequestData会有点慢
+	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
+	useMod bool, // parseRequestData=true时，生效
+) (apis []*ApiItem, err error) {
+	apis = make([]*ApiItem, 0)
+	logrus.Info("Scan api files...")
+	defer func() {
+		if err == nil {
+			logrus.Info("Scan api files completed")
+		}
+	}()
+
+	// api文件夹中所有的文件
+	subApiDir := make([]string, 0)
+	subApiDir, err = file.SearchFileNames(apiDir, func(fileInfo os.FileInfo) bool {
+		if fileInfo.IsDir() {
+			return true
+		} else {
+			return false
+		}
+
+	}, true)
+	subApiDir = append(subApiDir, apiDir)
+
+	// 服务源文件，只能一个pkg一个pkg地解析
+	for _, subApiDir := range subApiDir {
+		subApis, errParse := ParsePkgApis(apiDir, subApiDir, useMod, parseRequestData, parseCommentText)
+		err = errParse
+		if nil != err {
+			logrus.Errorf("parse api file dir %q failed. error: %s.", subApiDir, err)
+			return
+		}
+
+		apis = append(apis, subApis...)
+	}
+
 	return
 }
 
@@ -133,6 +157,7 @@ func ParsePkgApis(
 	apiPackageDir string,
 	useMod bool,
 	parseRequestData bool,
+	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
 ) (apis []*ApiItem, err error) {
 	apis = make([]*ApiItem, 0)
 	defer func() {
@@ -387,6 +412,30 @@ func ParsePkgApis(
 
 		}
 
+		if parseCommentText {
+			// scan package comment apis
+			for _, commentGroup := range astFile.Comments {
+				for _, comment := range commentGroup.List {
+					commentApis, errParse := ParseApisFromPkgCommentText(
+						fileName,
+						fileDir,
+						packageName,
+						pkgExportedPath,
+						pkgRelAlias,
+						comment,
+					)
+					err = errParse
+					if nil != err {
+						logrus.Errorf("parse apis from pkg comment text failed. error: %s.", err)
+						return
+					}
+
+					apis = append(apis, commentApis...)
+				}
+			}
+		}
+
+		// search package api types
 		for objName, obj := range astFile.Scope.Objects { // 遍历顶层所有变量，寻找HandleFunc
 			valueSpec, ok := obj.Decl.(*ast.ValueSpec)
 			if !ok {

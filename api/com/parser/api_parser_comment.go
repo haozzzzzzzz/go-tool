@@ -1,11 +1,6 @@
 package parser
 
 import (
-	"os"
-
-	"go/parser"
-	"go/token"
-
 	"regexp"
 
 	"encoding/json"
@@ -18,86 +13,90 @@ import (
 
 	"go/ast"
 
-	"path/filepath"
-
-	"github.com/haozzzzzzzz/go-rapid-development/utils/file"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
 	"github.com/sirupsen/logrus"
 )
 
-func ParseApisFromComments(dir string) (
-	title string,
-	description string,
-	version string,
-	contact string,
-	apis []*ApiItem,
-	err error,
-) {
-	title = "api service name"
-	description = "api service description"
-	version = "1.0"
-	contact = "contact"
-	apis = make([]*ApiItem, 0)
-
-	pkgDirs := make([]string, 0)
-	pkgDirs, err = file.SearchFileNames(dir, func(fileInfo os.FileInfo) bool {
-		if fileInfo.IsDir() {
-			return true
-		} else {
-			return false
-		}
-	}, true)
-	pkgDirs = append(pkgDirs, dir)
-
-	for _, pkgDir := range pkgDirs {
-		subApis, errParse := ParseApisFromPkgComment(pkgDir)
-		err = errParse
-		if nil != err {
-			logrus.Errorf("parse apis from pkg comment failed. pkgDir: %s, error: %s.", pkgDir, err)
-			return
-		}
-
-		apis = append(apis, subApis...)
-	}
-
-	return
-}
-
-func ParseApisFromPkgComment(pkgDir string) (apis []*ApiItem, err error) {
-	apis = make([]*ApiItem, 0)
-	fileSet := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fileSet, pkgDir, nil, parser.ParseComments)
-	if nil != err {
-		logrus.Errorf("parse pkg dir failed. pkgDir: %s, error: %s.", pkgDir, err)
-		return
-	}
-
-	for _, pkg := range pkgs {
-		for _, astFile := range pkg.Files {
-			for _, commentGroup := range astFile.Comments {
-				for _, comment := range commentGroup.List {
-					tempApis, errParse := ParseApisFromPkgCommentText(
-						fileSet,
-						astFile,
-						comment,
-					)
-					err = errParse
-					if nil != err {
-						logrus.Errorf("parse apis from pkg comment text failed. text: %s, error: %s.", comment.Text, err)
-						return
-					}
-
-					apis = append(apis, tempApis...)
-				}
-			}
-		}
-	}
-	return
-}
+//func ParseApisFromComments(dir string) (
+//	commonParams *ApiItemParams,
+//	apis []*ApiItem,
+//	err error,
+//) {
+//	apis = make([]*ApiItem, 0)
+//	pkgDirs := make([]string, 0)
+//	pkgDirs, err = file.SearchFileNames(dir, func(fileInfo os.FileInfo) bool {
+//		if fileInfo.IsDir() {
+//			return true
+//		} else {
+//			return false
+//		}
+//	}, true)
+//	pkgDirs = append(pkgDirs, dir)
+//
+//	for _, pkgDir := range pkgDirs {
+//		subCommonParams, subApis, errParse := ParseApisFromPkgComment(pkgDir)
+//		err = errParse
+//		if nil != err {
+//			logrus.Errorf("parse apis from pkg comment failed. pkgDir: %s, error: %s.", pkgDir, err)
+//			return
+//		}
+//
+//		apis = append(apis, subApis...)
+//
+//		if commonParams == nil {
+//			commonParams = subCommonParams
+//		} else {
+//			logrus.Warnf("found multi common params, and params: %#v was choosed, the other one is: %#v", commonParams, subCommonParams)
+//		}
+//	}
+//
+//	return
+//}
+//
+//func ParseApisFromPkgComment(
+//	pkgDir string,
+//) (
+//	commonParams *ApiItemParams,
+//	apis []*ApiItem,
+//	err error,
+//) {
+//	apis = make([]*ApiItem, 0)
+//	fileSet := token.NewFileSet()
+//	pkgs, err := parser.ParseDir(fileSet, pkgDir, nil, parser.ParseComments)
+//	if nil != err {
+//		logrus.Errorf("parse pkg dir failed. pkgDir: %s, error: %s.", pkgDir, err)
+//		return
+//	}
+//
+//	for _, pkg := range pkgs {
+//		for _, astFile := range pkg.Files {
+//			for _, commentGroup := range astFile.Comments {
+//				for _, comment := range commentGroup.List {
+//					tempApis, errParse := ParseApisFromPkgCommentText(
+//						fileSet,
+//						astFile,
+//						comment,
+//					)
+//					err = errParse
+//					if nil != err {
+//						logrus.Errorf("parse apis from pkg comment text failed. text: %s, error: %s.", comment.Text, err)
+//						return
+//					}
+//
+//					apis = append(apis, tempApis...)
+//				}
+//			}
+//		}
+//	}
+//	return
+//}
 
 func ParseApisFromPkgCommentText(
-	fileSet *token.FileSet,
-	astFile *ast.File,
+	fileName string,
+	fileDir string,
+	pkgName string,
+	pkgExportedPath string,
+	pkgRelAlias string,
 	comment *ast.Comment,
 ) (apis []*ApiItem, err error) {
 	apis = make([]*ApiItem, 0)
@@ -114,9 +113,6 @@ func ParseApisFromPkgCommentText(
 		strJsons = append(strJsons, strs[1])
 	}
 
-	tokenFile := fileSet.File(astFile.Pos())
-	fileName := tokenFile.Name()
-	fileDir := filepath.Dir(fileName)
 	for _, strJson := range strJsons {
 		tempApiItem, errParse := parseCommentTextToApi(strJson)
 		err = errParse
@@ -129,8 +125,10 @@ func ParseApisFromPkgCommentText(
 			continue
 		}
 
-		tempApiItem.PackageName = astFile.Name.Name
 		tempApiItem.SourceFile = fileName
+		tempApiItem.PackageName = pkgName
+		tempApiItem.PackageExportedPath = pkgExportedPath
+		tempApiItem.PackageRelAlias = pkgRelAlias
 		tempApiItem.PackageDir = fileDir
 
 		apis = append(apis, tempApiItem)
@@ -171,7 +169,6 @@ func ParseApisFromPkgCommentText(
 }
 @api_doc_end
 */
-
 type CommentTextApi struct {
 	HttpMethod    string                 `json:"http_method"`
 	RelativePaths []string               `json:"relative_paths"`
