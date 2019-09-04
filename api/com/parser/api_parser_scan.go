@@ -45,7 +45,7 @@ func (m *ApiParser) ScanApis(
 		return
 	}
 
-	codeApis, err := ParseApis(apiDir, parseRequestData, parseCommentText, useMod)
+	commonParams, codeApis, err := ParseApis(apiDir, parseRequestData, parseCommentText, useMod)
 	if nil != err {
 		logrus.Errorf("parse apis from code failed. error: %s.", err)
 		return
@@ -85,7 +85,11 @@ func ParseApis(
 	parseRequestData bool, // 如果parseRequestData会有点慢
 	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
 	useMod bool, // parseRequestData=true时，生效
-) (apis []*ApiItem, err error) {
+) (
+	commonParams *ApiItemParams,
+	apis []*ApiItem,
+	err error,
+) {
 	apis = make([]*ApiItem, 0)
 	logrus.Info("Scan api files...")
 	defer func() {
@@ -108,7 +112,7 @@ func ParseApis(
 
 	// 服务源文件，只能一个pkg一个pkg地解析
 	for _, subApiDir := range subApiDir {
-		subApis, errParse := ParsePkgApis(apiDir, subApiDir, useMod, parseRequestData, parseCommentText)
+		subCommonParams, subApis, errParse := ParsePkgApis(apiDir, subApiDir, useMod, parseRequestData, parseCommentText)
 		err = errParse
 		if nil != err {
 			logrus.Errorf("parse api file dir %q failed. error: %s.", subApiDir, err)
@@ -116,6 +120,14 @@ func ParseApis(
 		}
 
 		apis = append(apis, subApis...)
+
+		if subCommonParams != nil {
+			if commonParams == nil {
+				commonParams = subCommonParams
+			} else {
+				logrus.Warnf("multi common params: %#v, %#v", commonParams, subCommonParams)
+			}
+		}
 	}
 
 	return
@@ -158,7 +170,11 @@ func ParsePkgApis(
 	useMod bool,
 	parseRequestData bool,
 	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
-) (apis []*ApiItem, err error) {
+) (
+	commonParams *ApiItemParams,
+	apis []*ApiItem,
+	err error,
+) {
 	apis = make([]*ApiItem, 0)
 	defer func() {
 		if iRec := recover(); iRec != nil {
@@ -416,13 +432,13 @@ func ParsePkgApis(
 			// scan package comment apis
 			for _, commentGroup := range astFile.Comments {
 				for _, comment := range commentGroup.List {
-					commentApis, errParse := ParseApisFromPkgCommentText(
+					subCommonParams, commentApis, errParse := ParseApisFromPkgCommentText(
 						fileName,
 						fileDir,
 						packageName,
 						pkgExportedPath,
 						pkgRelAlias,
-						comment,
+						comment.Text,
 					)
 					err = errParse
 					if nil != err {
@@ -431,6 +447,14 @@ func ParsePkgApis(
 					}
 
 					apis = append(apis, commentApis...)
+
+					if subCommonParams != nil {
+						if commonParams == nil {
+							commonParams = subCommonParams
+						} else {
+							logrus.Warnf("multi common params: %#v, %#v", commonParams, subCommonParams)
+						}
+					}
 				}
 			}
 		}

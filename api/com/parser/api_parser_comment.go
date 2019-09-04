@@ -11,8 +11,6 @@ import (
 
 	"fmt"
 
-	"go/ast"
-
 	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
 	"github.com/sirupsen/logrus"
 )
@@ -97,17 +95,21 @@ func ParseApisFromPkgCommentText(
 	pkgName string,
 	pkgExportedPath string,
 	pkgRelAlias string,
-	comment *ast.Comment,
-) (apis []*ApiItem, err error) {
+	commentText string,
+) (
+	commonParams *ApiItemParams,
+	apis []*ApiItem,
+	err error,
+) {
 	apis = make([]*ApiItem, 0)
 
-	docReg, err := regexp.Compile(`(?si:@api_doc_start(.*?)@api_doc_end)`)
+	docReg, err := regexp.Compile(`(?si:@api_doc_start(.*?)@api_doc_end)`) // TODO 这里需要增加@api_doc_common_start和@api_doc_common_end
 	if nil != err {
 		logrus.Errorf("reg compile pkg api comment text failed. error: %s.", err)
 		return
 	}
 
-	arrStrs := docReg.FindAllStringSubmatch(comment.Text, -1)
+	arrStrs := docReg.FindAllStringSubmatch(commentText, -1)
 	strJsons := make([]string, 0)
 	for _, strs := range arrStrs {
 		strJsons = append(strJsons, strs[1])
