@@ -205,7 +205,7 @@ func parseCommentTextToApi(
 		RelativePaths: comApi.RelativePaths,
 	}
 
-	api.PathData, err = commentApiRequestDataToStructType(comApi.PathData)
+	api.UriData, err = commentApiRequestDataToStructType(comApi.PathData)
 	if nil != err {
 		logrus.Errorf("comment text api path data to struct type failed. error: %s.", err)
 		return

@@ -102,10 +102,17 @@ func (m *SwaggerSpec) parseApi(path string, api *ApiItem) (err error) {
 		logrus.Warnf("not supported method for swagger spec. method: %s", api.HttpMethod)
 	}
 
-	// path data
-	if api.PathData != nil {
-		for _, pathField := range api.PathData.Fields {
+	// uri data
+	if api.UriData != nil {
+		for _, pathField := range api.UriData.Fields {
 			operation.Parameters = append(operation.Parameters, *FieldBasicParameter("path", pathField))
+		}
+	}
+
+	// header data
+	if api.HeaderData != nil {
+		for _, headerField := range api.HeaderData.Fields {
+			operation.Parameters = append(operation.Parameters, *FieldBasicParameter("header", headerField))
 		}
 	}
 

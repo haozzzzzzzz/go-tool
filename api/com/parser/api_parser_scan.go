@@ -39,6 +39,7 @@ func (m *ApiParser) ScanApis(
 		}
 	}()
 
+	// scan api dir
 	apiDir, err := filepath.Abs(m.ApiDir)
 	if nil != err {
 		logrus.Warnf("get absolute file apiDir failed. \n%s.", err)
@@ -288,7 +289,6 @@ func ParsePkgApis(
 				continue
 			}
 
-			//fmt.Println(pkg.PkgPath)
 			pkgPath[pkg.PkgPath] = true
 
 			// 合并types.Info
@@ -309,12 +309,39 @@ func ParsePkgApis(
 
 					impPkgPaths[impPkg.PkgPath] = true
 
-					//fmt.Println(impPkg.PkgPath)
 					// 包引用的包的类型，目前只解析一层
 					mergeTypesInfos(typesInfo, impPkg.TypesInfo)
 				}
 			}
 		}
+	}
+
+	// map api item def ident ast obj to types.Named
+	mapApiObjTypes := make(map[*ast.Object]*types.Named)
+	for ident, def := range typesInfo.Defs {
+		typesVar, ok := def.(*types.Var)
+		if !ok {
+			continue
+		}
+
+		typesNamed, ok := typesVar.Type().(*types.Named)
+		if !ok {
+			continue
+		}
+
+		typeName := typesNamed.Obj()
+		typePkg := typeName.Pkg()
+		if typePkg == nil || typePkg.Name() != "ginbuilder" || typeName.Name() != "HandleFunc" {
+			continue
+		}
+
+		_, ok = mapApiObjTypes[ident.Obj]
+		if ok {
+			continue
+		}
+
+		// ginbuilder.HandlerFunc obj
+		mapApiObjTypes[ident.Obj] = typesNamed
 	}
 
 	for _, astFile := range astFiles { // 遍历当前package的语法树
@@ -366,6 +393,7 @@ func ParsePkgApis(
 				continue
 			}
 
+			fmt.Printf("%#v\n", mapApiObjTypes[obj])
 			_ = objName
 			selectorExpr, ok := valueSpec.Type.(*ast.SelectorExpr)
 			if !ok {
@@ -492,8 +520,10 @@ func ParsePkgApis(
 									}
 
 									switch ident.Name {
-									case "pathData":
-										apiItem.PathData = parseApiRequest(typesInfo, ident)
+									case "headerData":
+										apiItem.HeaderData = parseApiRequest(typesInfo, ident)
+									case "pathData", "uriData":
+										apiItem.UriData = parseApiRequest(typesInfo, ident)
 									case "queryData":
 										apiItem.QueryData = parseApiRequest(typesInfo, ident)
 									case "postData":
@@ -522,6 +552,7 @@ func ParsePkgApis(
 
 			apis = append(apis, apiItem)
 		}
+
 	}
 
 	return

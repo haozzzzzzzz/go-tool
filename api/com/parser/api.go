@@ -150,14 +150,16 @@ type ApiItem struct {
 	PackageDir          string `json:"package_dir" yaml:"package_dir"`                                     // 包所在的路径
 	PackageRelAlias     string `json:"package_rel_alias" yaml:"package_rel_alias"`                         // 包昵称
 
-	HttpMethod    string      `validate:"required" json:"http_method" yaml:"http_method"`
-	RelativePaths []string    `validate:"required" json:"relative_paths" yaml:"relative_paths"`
-	PathData      *StructType `json:"path_data" yaml:"path_data"`
-	QueryData     *StructType `json:"query_data" yaml:"query_data"`
-	PostData      *StructType `json:"post_data" yaml:"post_data"`
-	RespData      *StructType `json:"response_data" yaml:"response_data"`
+	HttpMethod    string   `validate:"required" json:"http_method" yaml:"http_method"`
+	RelativePaths []string `validate:"required" json:"relative_paths" yaml:"relative_paths"`
 
-	Summary     string `json:"summary" yaml:"summary"`
+	HeaderData *StructType `json:"header_data" yaml:"header_data"`
+	UriData    *StructType `json:"uri_data" yaml:"uri_data"`
+	QueryData  *StructType `json:"query_data" yaml:"query_data"`
+	PostData   *StructType `json:"post_data" yaml:"post_data"`
+	RespData   *StructType `json:"response_data" yaml:"response_data"`
+
+	Summary     string `json:"summary" yaml:"summary"` // TODO fill summary
 	Description string `json:"description" yaml:"description"`
 }
 

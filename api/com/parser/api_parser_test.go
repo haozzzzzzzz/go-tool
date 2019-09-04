@@ -12,7 +12,7 @@ package parser
 //
 //	_ = apis
 //	for _, item := range apis {
-//		//fmt.Printf("%#v\n", item.PathData)
+//		//fmt.Printf("%#v\n", item.UriData)
 //		//fmt.Printf("%#v\n", item.QueryData)
 //		//fmt.Printf("%#v\n", item.PostData)
 //		for _, field := range item.PostData.Fields {

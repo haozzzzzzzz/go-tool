@@ -9,6 +9,7 @@ func TestSaveApisSwaggerSpec(t *testing.T) {
 	swgSpc := NewSwaggerSpec()
 	swgSpc.Apis([]*ApiItem{
 		{
+			Summary:        "书本信息接口",
 			PackageName:    "pack",
 			ApiHandlerFunc: "func",
 			HttpMethod:     "GET",
@@ -16,7 +17,19 @@ func TestSaveApisSwaggerSpec(t *testing.T) {
 				"/api/book/:book_id",
 				"/api/book",
 			},
-			PathData: &StructType{
+			HeaderData: &StructType{
+				Fields: []*Field{
+					{
+						TypeName: "string",
+						Tags: map[string]string{
+							"json":    "content-type",
+							"header":  "content-type",
+							"binding": "required",
+						},
+					},
+				},
+			},
+			UriData: &StructType{
 				Fields: []*Field{
 					{
 						TypeName: "int64",
