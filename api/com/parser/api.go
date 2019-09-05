@@ -189,6 +189,10 @@ func NewApiItemParams() *ApiItemParams {
 
 func (m *ApiItemParams) MergeApiItemParams(items ...*ApiItemParams) (err error) {
 	for _, item := range items {
+		if item == nil {
+			continue
+		}
+
 		if item.HeaderData != nil && len(item.HeaderData.Fields) > 0 {
 			if m.HeaderData == nil {
 				m.HeaderData = NewStructType()
