@@ -2,6 +2,8 @@ package parser
 
 import (
 	"fmt"
+	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
+	"github.com/sirupsen/logrus"
 	"strings"
 )
 
@@ -11,6 +13,14 @@ type Field struct {
 	Tags        map[string]string `json:"tags" yaml:"tags"`
 	TypeSpec    IType             `json:"type_spec" form:"type_spec"`
 	Description string            `json:"description" form:"description"`
+}
+
+func (m *Field) TagJsonOrName() (name string) {
+	name = m.TagJson()
+	if name == "" {
+		name = m.Name
+	}
+	return
 }
 
 func (m *Field) TagJson() (name string) {
@@ -66,18 +76,35 @@ func NewBasicType(name string) *BasicType {
 
 // struct
 type StructType struct {
-	TypeClass   string   `json:"type_class" yaml:"type_class"`
-	Name        string   `json:"name" yaml:"name"`
-	Fields      []*Field `json:"fields" yaml:"fields"`
-	Description string   `json:"description" yaml:"description"`
+	TypeClass   string            `json:"type_class" yaml:"type_class"`
+	Name        string            `json:"name" yaml:"name"`
+	Fields      []*Field          `json:"fields" yaml:"fields"`
+	mField      map[string]*Field `json:"-" yaml:"-"`
+	Description string            `json:"description" yaml:"description"`
 }
 
 func (m *StructType) TypeName() string {
 	return m.Name
 }
 
-func (m *StructType) AddFields(filed *Field) {
-	m.Fields = append(m.Fields, filed)
+func (m *StructType) AddFields(fields ...*Field) (err error) {
+	for _, field := range fields {
+		if field.Name == "" {
+			err = uerrors.Newf("struct field require name")
+			return
+		}
+
+		_, ok := m.mField[field.TagJsonOrName()]
+		if ok {
+			err = uerrors.Newf("has conflict field name")
+			return
+		}
+
+		m.Fields = append(m.Fields, field)
+
+	}
+
+	return
 }
 
 func NewStructType() *StructType {
@@ -85,6 +112,7 @@ func NewStructType() *StructType {
 		TypeClass: TypeClassStructType,
 		Name:      TypeClassStructType,
 		Fields:    make([]*Field, 0),
+		mField:    make(map[string]*Field),
 	}
 }
 
@@ -149,6 +177,92 @@ type ApiItemParams struct {
 	RespData   *StructType `json:"response_data" yaml:"response_data"`
 }
 
+func NewApiItemParams() *ApiItemParams {
+	return &ApiItemParams{
+		HeaderData: NewStructType(),
+		UriData:    NewStructType(),
+		QueryData:  NewStructType(),
+		PostData:   NewStructType(),
+		RespData:   NewStructType(),
+	}
+}
+
+func (m *ApiItemParams) MergeApiItemParams(items ...*ApiItemParams) (err error) {
+	for _, item := range items {
+		if item.HeaderData != nil && len(item.HeaderData.Fields) > 0 {
+			if m.HeaderData == nil {
+				m.HeaderData = NewStructType()
+			}
+
+			err = m.HeaderData.AddFields(item.HeaderData.Fields...)
+			if nil != err {
+				logrus.Errorf("add header data fields failed. error: %s.", err)
+				return
+			}
+		}
+
+		if item.UriData != nil && len(item.UriData.Fields) > 0 {
+			if m.UriData == nil {
+				m.UriData = NewStructType()
+			}
+
+			err = m.UriData.AddFields(item.UriData.Fields...)
+			if nil != err {
+				logrus.Errorf("add uri data fields failed. error: %s.", err)
+				return
+			}
+		}
+
+		if item.QueryData != nil && len(item.QueryData.Fields) > 0 {
+			if m.QueryData == nil {
+				m.QueryData = NewStructType()
+			}
+
+			err = m.QueryData.AddFields(item.QueryData.Fields...)
+			if nil != err {
+				logrus.Errorf("add query data fields failed. error: %s.", err)
+				return
+			}
+		}
+
+		if item.PostData != nil && len(item.PostData.Fields) > 0 {
+			if m.PostData == nil {
+				m.PostData = NewStructType()
+			}
+
+			err = m.PostData.AddFields(item.PostData.Fields...)
+			if nil != err {
+				logrus.Errorf("add post data fields failed. error: %s.", err)
+				return
+			}
+		}
+
+		if item.RespData != nil && len(item.RespData.Fields) > 0 {
+			if m.RespData == nil {
+				m.RespData = NewStructType()
+			}
+
+			err = m.RespData.AddFields(item.RespData.Fields...)
+			if nil != err {
+				logrus.Errorf("add resp data fields failed. error: %s.", err)
+				return
+			}
+		}
+
+	}
+	return
+}
+
+func MergeApiItemParams(items ...*ApiItemParams) (params *ApiItemParams, err error) {
+	params = NewApiItemParams()
+	err = params.MergeApiItemParams(items...)
+	if nil != err {
+		logrus.Errorf("merge api items params failed. error: %s.", err)
+		return
+	}
+	return
+}
+
 type ApiItem struct {
 	ApiItemParams
 
@@ -163,7 +277,7 @@ type ApiItem struct {
 	HttpMethod    string   `validate:"required" json:"http_method" yaml:"http_method"`
 	RelativePaths []string `validate:"required" json:"relative_paths" yaml:"relative_paths"`
 
-	Summary     string `json:"summary" yaml:"summary"` // TODO fill summary
+	Summary     string `json:"summary" yaml:"summary"`
 	Description string `json:"description" yaml:"description"`
 }
 
@@ -180,38 +294,36 @@ func (m *ApiItem) PackageFuncName() string {
 func SuccessResponseStructType(
 	respData *StructType,
 ) (successResp *StructType) {
-	successResp = &StructType{
-		TypeClass:   TypeClassStructType,
-		Name:        "SuccessResponse",
-		Description: "api success response",
-		Fields: []*Field{
-			{
-				Name:        "ReturnCode",
-				TypeName:    "uint32",
-				Description: "result code",
-				Tags: map[string]string{
-					"json": "ret",
-				},
-				TypeSpec: NewBasicType("uint32"),
+	successResp = NewStructType()
+	successResp.Name = "SuccessResponse"
+	successResp.Description = "api success response"
+	successResp.Fields = []*Field{
+		{
+			Name:        "ReturnCode",
+			TypeName:    "uint32",
+			Description: "result code",
+			Tags: map[string]string{
+				"json": "ret",
 			},
-			{
-				Name:        "Message",
-				TypeName:    "string",
-				Description: "result message",
-				Tags: map[string]string{
-					"json": "msg",
-				},
-				TypeSpec: NewBasicType("string"),
+			TypeSpec: NewBasicType("uint32"),
+		},
+		{
+			Name:        "Message",
+			TypeName:    "string",
+			Description: "result message",
+			Tags: map[string]string{
+				"json": "msg",
 			},
-			{
-				Name:        "Data",
-				TypeName:    respData.TypeName(),
-				Description: "result data",
-				Tags: map[string]string{
-					"json": "data",
-				},
-				TypeSpec: respData,
+			TypeSpec: NewBasicType("string"),
+		},
+		{
+			Name:        "Data",
+			TypeName:    respData.TypeName(),
+			Description: "result data",
+			Tags: map[string]string{
+				"json": "data",
 			},
+			TypeSpec: respData,
 		},
 	}
 	return

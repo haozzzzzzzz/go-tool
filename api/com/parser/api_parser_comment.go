@@ -1,9 +1,8 @@
 package parser
 
 import (
-	"regexp"
-
 	"encoding/json"
+	"regexp"
 
 	"reflect"
 
@@ -97,13 +96,68 @@ func ParseApisFromPkgCommentText(
 	pkgRelAlias string,
 	commentText string,
 ) (
-	commonParams *ApiItemParams,
+	commonParams []*ApiItemParams,
 	apis []*ApiItem,
 	err error,
 ) {
-	apis = make([]*ApiItem, 0)
+	commonApis, err := parseApisFromCommentText(
+		fileName,
+		fileDir,
+		pkgName,
+		pkgExportedPath,
+		pkgRelAlias,
+		commentText,
+		"@api_doc_common_start",
+		"@api_doc_common_end",
+	)
+	if nil != err {
+		logrus.Errorf("parse api common params from comment failed. error: %s.", err)
+		return
+	}
 
-	docReg, err := regexp.Compile(`(?si:@api_doc_start(.*?)@api_doc_end)`) // TODO 这里需要增加@api_doc_common_start和@api_doc_common_end
+	commonParams = make([]*ApiItemParams, 0)
+	for _, commonApi := range commonApis {
+		commonParams = append(commonParams, &commonApi.ApiItemParams)
+	}
+
+	apis, err = parseApisFromCommentText(
+		fileName,
+		fileDir,
+		pkgName,
+		pkgExportedPath,
+		pkgRelAlias,
+		commentText,
+		"@api_doc_start",
+		"@api_doc_end",
+	)
+	if nil != err {
+		logrus.Errorf("parse apis from comment failed. error: %s.", err)
+		return
+	}
+
+	for _, api := range apis {
+		if api.HttpMethod == "" || len(api.RelativePaths) == 0 {
+			logrus.Warnf("found empty api doc comment, require http_method and relative_paths")
+			return
+		}
+	}
+
+	return
+}
+
+func parseApisFromCommentText(
+	fileName string,
+	fileDir string,
+	pkgName string,
+	pkgExportedPath string,
+	pkgRelAlias string,
+	commentText string,
+	startTag string,
+	endTag string,
+) (apis []*ApiItem, err error) {
+	apis = make([]*ApiItem, 0)
+	strReg := fmt.Sprintf("(?si:%s(.*?)%s)", startTag, endTag)
+	docReg, err := regexp.Compile(strReg)
 	if nil != err {
 		logrus.Errorf("reg compile pkg api comment text failed. error: %s.", err)
 		return
@@ -172,16 +226,14 @@ func ParseApisFromPkgCommentText(
 @api_doc_end
 */
 type CommentTextApi struct {
-	HttpMethod    string                 `json:"http_method"`
-	RelativePaths []string               `json:"relative_paths"`
-	PathData      map[string]interface{} `json:"path_data"`
-	QueryData     map[string]interface{} `json:"query_data"`
-	PostData      map[string]interface{} `json:"post_data"`
-	RespData      map[string]interface{} `json:"resp_data"`
-}
+	HttpMethod    string   `json:"http_method"`
+	RelativePaths []string `json:"relative_paths"`
 
-func (m *CommentTextApi) IsEmpty() bool {
-	return m.HttpMethod == "" || len(m.RelativePaths) == 0
+	UriData    map[string]interface{} `json:"uri_data"`
+	HeaderData map[string]interface{} `json:"header_data"`
+	QueryData  map[string]interface{} `json:"query_data"`
+	PostData   map[string]interface{} `json:"post_data"`
+	RespData   map[string]interface{} `json:"resp_data"`
 }
 
 func parseCommentTextToApi(
@@ -194,19 +246,20 @@ func parseCommentTextToApi(
 		return
 	}
 
-	if comApi.IsEmpty() {
-		logrus.Warnf("found empty api doc comment, require http_method and relative_paths")
-		return
-	}
-
 	api = &ApiItem{
 		HttpMethod:    comApi.HttpMethod,
 		RelativePaths: comApi.RelativePaths,
 	}
 
-	api.UriData, err = commentApiRequestDataToStructType(comApi.PathData)
+	api.UriData, err = commentApiRequestDataToStructType(comApi.UriData)
 	if nil != err {
 		logrus.Errorf("comment text api path data to struct type failed. error: %s.", err)
+		return
+	}
+
+	api.HeaderData, err = commentApiRequestDataToStructType(comApi.HeaderData)
+	if nil != err {
+		logrus.Errorf("comment text api header data to struct type failed. error: %s.", err)
 		return
 	}
 
@@ -253,7 +306,11 @@ func commentApiRequestDataToStructType(
 			return
 		}
 
-		structType.AddFields(field)
+		err = structType.AddFields(field)
+		if nil != err {
+			logrus.Errorf("struct type add fields failed. error: %s.", err)
+			return
+		}
 	}
 	return
 }

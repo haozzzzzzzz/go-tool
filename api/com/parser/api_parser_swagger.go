@@ -47,9 +47,19 @@ func (m *SwaggerSpec) ParseApis() (
 		}
 	}()
 
+	// parse apis
 	for _, api := range m.apis {
 		paths := api.RelativePaths
 		for _, path := range paths { // if api has handler with multi paths, gen spec for each path
+
+			// merge common field
+			err = api.ApiItemParams.MergeApiItemParams(m.commonParams)
+			if nil != err {
+				fmt.Println(api.ApiItemParams)
+				logrus.Errorf("merge common fields failed. error: %s.", err)
+				return
+			}
+
 			err = m.parseApi(path, api)
 			if nil != err {
 				logrus.Errorf("swagger spec parse api failed. error: %s.", err)

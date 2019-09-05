@@ -7,8 +7,35 @@ import (
 
 func TestSaveApisSwaggerSpec(t *testing.T) {
 	swgSpc := NewSwaggerSpec()
-	swgSpc.Apis([]*ApiItem{
+	swgSpc.Apis(nil, []*ApiItem{
 		{
+			ApiItemParams: ApiItemParams{
+				HeaderData: &StructType{
+					Fields: []*Field{
+						{
+							Name:     "xx",
+							TypeName: "string",
+							Tags: map[string]string{
+								"json":    "content-type",
+								"header":  "content-type",
+								"binding": "required",
+							},
+						},
+					},
+				},
+				UriData: &StructType{
+					Fields: []*Field{
+						{
+							Name:     "tt",
+							TypeName: "int64",
+							Tags: map[string]string{
+								"json":    "book_id",
+								"binding": "required",
+							},
+						},
+					},
+				},
+			},
 			Summary:        "书本信息接口",
 			PackageName:    "pack",
 			ApiHandlerFunc: "func",
@@ -16,29 +43,6 @@ func TestSaveApisSwaggerSpec(t *testing.T) {
 			RelativePaths: []string{
 				"/api/book/:book_id",
 				"/api/book",
-			},
-			HeaderData: &StructType{
-				Fields: []*Field{
-					{
-						TypeName: "string",
-						Tags: map[string]string{
-							"json":    "content-type",
-							"header":  "content-type",
-							"binding": "required",
-						},
-					},
-				},
-			},
-			UriData: &StructType{
-				Fields: []*Field{
-					{
-						TypeName: "int64",
-						Tags: map[string]string{
-							"json":    "book_id",
-							"binding": "required",
-						},
-					},
-				},
 			},
 		},
 	})

@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"bufio"
 	"errors"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
 	"github.com/haozzzzzzzz/go-tool/api/com/mod"
@@ -9,6 +10,7 @@ import (
 	"go/parser"
 	"go/token"
 	"golang.org/x/tools/go/packages"
+	"io"
 	"path/filepath"
 	"runtime/debug"
 	"sort"
@@ -32,7 +34,7 @@ func (m *ApiParser) ScanApis(
 	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
 	useMod bool, // parseRequestData=true时，生效
 ) (
-	commonParams *ApiItemParams,
+	commonApiParams *ApiItemParams,
 	apis []*ApiItem,
 	err error,
 ) {
@@ -45,7 +47,7 @@ func (m *ApiParser) ScanApis(
 		return
 	}
 
-	commonParams, codeApis, err := ParseApis(apiDir, parseRequestData, parseCommentText, useMod)
+	commonParamsSlice, codeApis, err := ParseApis(apiDir, parseRequestData, parseCommentText, useMod)
 	if nil != err {
 		logrus.Errorf("parse apis from code failed. error: %s.", err)
 		return
@@ -75,8 +77,23 @@ func (m *ApiParser) ScanApis(
 	for _, key := range sortedApiUriKeys {
 		sortedApis = append(sortedApis, mapApi[key])
 	}
-
 	apis = sortedApis
+
+	// merge common params
+	lenCommonParams := len(commonParamsSlice)
+	if lenCommonParams > 1 {
+		logrus.Warnf("found multi common params, merging them")
+		commonApiParams, err = MergeApiItemParams(commonParamsSlice...)
+		if nil != err {
+			logrus.Errorf("merge apis item params failed. error: %s.", err)
+			return
+		}
+
+	} else if lenCommonParams == 1 {
+		commonApiParams = commonParamsSlice[0]
+
+	}
+
 	return
 }
 
@@ -86,7 +103,7 @@ func ParseApis(
 	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
 	useMod bool, // parseRequestData=true时，生效
 ) (
-	commonParams *ApiItemParams,
+	commonParams []*ApiItemParams,
 	apis []*ApiItem,
 	err error,
 ) {
@@ -120,14 +137,7 @@ func ParseApis(
 		}
 
 		apis = append(apis, subApis...)
-
-		if subCommonParams != nil {
-			if commonParams == nil {
-				commonParams = subCommonParams
-			} else {
-				logrus.Warnf("multi common params: %#v, %#v", commonParams, subCommonParams)
-			}
-		}
+		commonParams = append(commonParams, subCommonParams...)
 	}
 
 	return
@@ -171,7 +181,7 @@ func ParsePkgApis(
 	parseRequestData bool,
 	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
 ) (
-	commonParams *ApiItemParams,
+	commonParams []*ApiItemParams,
 	apis []*ApiItem,
 	err error,
 ) {
@@ -358,7 +368,7 @@ func ParsePkgApis(
 	}
 
 	// map api item def ident ast obj to types.Named
-	mapApiObjTypes := make(map[*ast.Object]*types.Named)
+	mapApiObjTypes := make(map[*ast.Ident]*types.Named)
 	for ident, def := range typesInfo.Defs {
 		typesVar, ok := def.(*types.Var)
 		if !ok {
@@ -376,13 +386,13 @@ func ParsePkgApis(
 			continue
 		}
 
-		_, ok = mapApiObjTypes[ident.Obj]
+		_, ok = mapApiObjTypes[ident]
 		if ok {
 			continue
 		}
 
 		// ginbuilder.HandlerFunc obj
-		mapApiObjTypes[ident.Obj] = typesNamed
+		mapApiObjTypes[ident] = typesNamed
 	}
 
 	for _, astFile := range astFiles { // 遍历当前package的语法树
@@ -448,25 +458,29 @@ func ParsePkgApis(
 
 					apis = append(apis, commentApis...)
 
-					if subCommonParams != nil {
-						if commonParams == nil {
-							commonParams = subCommonParams
-						} else {
-							logrus.Warnf("multi common params: %#v, %#v", commonParams, subCommonParams)
-						}
-					}
+					commonParams = append(commonParams, subCommonParams...)
 				}
 			}
 		}
 
 		// search package api types
-		for objName, obj := range astFile.Scope.Objects { // 遍历顶层所有变量，寻找HandleFunc
-			valueSpec, ok := obj.Decl.(*ast.ValueSpec)
+		for _, decl := range astFile.Decls /*objName, obj := range astFile.Scope.Objects*/ { // 遍历顶层所有变量，寻找HandleFunc
+			genDel, ok := decl.(*ast.GenDecl)
 			if !ok {
 				continue
 			}
 
-			_ = objName
+			if len(genDel.Specs) == 0 {
+				return
+			}
+
+			valueSpec, ok := genDel.Specs[0].(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+
+			obj := valueSpec.Names[0] // variables with name
+			objName := obj.Name
 			selectorExpr, ok := valueSpec.Type.(*ast.SelectorExpr)
 			if !ok {
 				continue
@@ -483,6 +497,45 @@ func ParsePkgApis(
 				continue
 			}
 
+			// ginbuild.HandlerFunc obj
+
+			var summary, description string
+			if genDel.Doc != nil {
+				apiComment := genDel.Doc.Text()
+				strBuf := bufio.NewReader(strings.NewReader(apiComment))
+				bLine, _, errRead := strBuf.ReadLine()
+				err = errRead
+				if nil != err {
+					logrus.Errorf("read api comment first line failed. error: %s.", err)
+					return
+				}
+
+				summary = string(bLine)
+				for {
+					bDesc := make([]byte, 1000)
+					num, errR := strBuf.Read(bDesc)
+					err = errR
+					if nil != err && err != io.EOF {
+						logrus.Errorf("read description failed. error: %s.", err)
+						return
+					}
+
+					if err == io.EOF {
+						err = nil
+						break
+					}
+
+					if num <= 0 {
+						break
+					}
+
+					description += string(bDesc)
+				}
+
+				summary = strings.TrimSpace(summary)
+				description = strings.TrimSpace(description)
+			}
+
 			apiType, ok := mapApiObjTypes[obj]
 			if !ok {
 				logrus.Warnf("failed to find types of api ast ident. %s", obj)
@@ -497,6 +550,8 @@ func ParsePkgApis(
 				PackageRelAlias:     pkgRelAlias,
 				PackageDir:          fileDir,
 				RelativePaths:       make([]string, 0),
+				Summary:             summary,
+				Description:         description,
 			}
 
 			for _, value := range valueSpec.Values { // 遍历属性
@@ -763,7 +818,11 @@ func parseType(
 			field.TypeName = fieldType.TypeName()
 			field.TypeSpec = fieldType
 
-			structType.Fields = append(structType.Fields, field)
+			err := structType.AddFields(field)
+			if nil != err {
+				logrus.Warnf("parse struct type add field failed. error: %s.", err)
+				return
+			}
 
 		}
 
