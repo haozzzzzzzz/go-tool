@@ -32,7 +32,7 @@ import (
 func (m *ApiParser) ScanApis(
 	parseRequestData bool, // 如果parseRequestData会有点慢
 	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
-	useMod bool, // parseRequestData=true时，生效
+	usePackagesParse bool, // use Packages or Parser, gomod使用package，gopath使用parser
 ) (
 	commonApiParams *ApiItemParams,
 	apis []*ApiItem,
@@ -47,7 +47,7 @@ func (m *ApiParser) ScanApis(
 		return
 	}
 
-	commonParamsSlice, codeApis, err := ParseApis(apiDir, parseRequestData, parseCommentText, useMod)
+	commonParamsSlice, codeApis, err := ParseApis(apiDir, parseRequestData, parseCommentText, usePackagesParse)
 	if nil != err {
 		logrus.Errorf("parse apis from code failed. error: %s.", err)
 		return
@@ -101,7 +101,7 @@ func ParseApis(
 	apiDir string,
 	parseRequestData bool, // 如果parseRequestData会有点慢
 	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
-	useMod bool, // parseRequestData=true时，生效
+	userPackageParse bool, // parseRequestData=true时，生效
 ) (
 	commonParams []*ApiItemParams,
 	apis []*ApiItem,
@@ -129,7 +129,7 @@ func ParseApis(
 
 	// 服务源文件，只能一个pkg一个pkg地解析
 	for _, subApiDir := range subApiDir {
-		subCommonParams, subApis, errParse := ParsePkgApis(apiDir, subApiDir, useMod, parseRequestData, parseCommentText)
+		subCommonParams, subApis, errParse := ParsePkgApis(apiDir, subApiDir, userPackageParse, parseRequestData, parseCommentText)
 		err = errParse
 		if nil != err {
 			logrus.Errorf("parse api file dir %q failed. error: %s.", subApiDir, err)
@@ -177,7 +177,7 @@ func mergeTypesInfos(info *types.Info, infos ...*types.Info) {
 func ParsePkgApis(
 	apiRootDir string,
 	apiPackageDir string,
-	useMod bool,
+	usePackagesParse bool, // use Packages or Parser
 	parseRequestData bool,
 	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
 ) (
@@ -185,6 +185,7 @@ func ParsePkgApis(
 	apis []*ApiItem,
 	err error,
 ) {
+	commonParams = make([]*ApiItemParams, 0)
 	apis = make([]*ApiItem, 0)
 	defer func() {
 		if iRec := recover(); iRec != nil {
@@ -193,10 +194,20 @@ func ParsePkgApis(
 		}
 	}()
 
+	hasGoFile, err := file.DirHasExtFile(apiPackageDir, ".go")
+	if nil != err {
+		logrus.Errorf("check dir has ext file failed. error: %s.", err)
+		return
+	}
+
+	if !hasGoFile {
+		return
+	}
+
 	goPaths := make([]string, 0)
 	var goModName, goModDir string
 
-	if !useMod {
+	if !usePackagesParse {
 		goPaths = strings.Split(os.Getenv("GOPATH"), ":")
 		if len(goPaths) == 0 {
 			err = uerrors.Newf("failed to find go paths")
@@ -228,7 +239,7 @@ func ParsePkgApis(
 
 	fileSet := token.NewFileSet()
 
-	if !useMod { // not use mod
+	if !usePackagesParse { // not use mod
 		parseMode := parser.AllErrors | parser.ParseComments
 		astPkgMap, errParse := parser.ParseDir(fileSet, apiPackageDir, nil, parseMode)
 		err = errParse
@@ -414,7 +425,7 @@ func ParsePkgApis(
 		}
 
 		// package exported path
-		if !useMod { // 使用GOPATH
+		if !usePackagesParse { // 使用GOPATH
 			foundInGoPath := false
 
 			for _, subGoPath := range goPaths {
