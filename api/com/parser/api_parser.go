@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"github.com/haozzzzzzzz/go-rapid-development/api/request"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/file"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
 	"github.com/haozzzzzzzz/go-tool/api/com/project"
@@ -46,25 +47,6 @@ func NewApiParser(serviceDir string) (apiParser *ApiParser, err error) {
 	return
 }
 
-//func (m *ApiParser) ParseRouter(
-//	parseRequestData bool,
-//	importSource bool,
-//) (err error) {
-//	_, apis, err := m.ScanApis(parseRequestData, importSource)
-//	if nil != err {
-//		logrus.Errorf("Scan api failed. %s.", err)
-//		return
-//	}
-//
-//	err = m.GenerateRoutersSourceFile(apis)
-//	if nil != err {
-//		logrus.Errorf("map api failed. %s.", err)
-//		return
-//	}
-//
-//	return
-//}
-
 func (m *ApiParser) apiUrlKey(uri string, method string) string {
 	return fmt.Sprintf("%s_%s", uri, method)
 }
@@ -98,7 +80,18 @@ func (m *ApiParser) GenerateRoutersSourceFile(apis []*ApiItem) (err error) {
 		}
 
 		for _, uri := range apiItem.RelativePaths {
-			str := fmt.Sprintf("    engine.Handle(\"%s\", \"%s\", %s.GinHandler)", apiItem.HttpMethod, uri, strHandleFunc)
+			var str string
+			switch apiItem.HttpMethod {
+			case request.METHOD_ANY:
+				str = fmt.Sprintf("    engine.Any(\"%s\", %s.GinHandler)", uri, strHandleFunc)
+			default:
+				str = fmt.Sprintf("    engine.Handle(\"%s\", \"%s\", %s.GinHandler)", apiItem.HttpMethod, uri, strHandleFunc)
+			}
+
+			if str == "" {
+				logrus.Errorf("gen code for api item failed. api: %#v, error: %s.", apiItem, err)
+				return
+			}
 			strRouters = append(strRouters, str)
 		}
 

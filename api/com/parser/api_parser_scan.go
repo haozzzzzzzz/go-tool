@@ -591,6 +591,7 @@ func ParsePkgApis(
 						}
 
 						value := strings.Replace(valueLit.Value, "\"", "", -1)
+						value = strings.ToUpper(value)
 						switch value {
 						case request.METHOD_GET,
 							request.METHOD_POST,
@@ -600,7 +601,9 @@ func ParsePkgApis(
 							request.METHOD_OPTIONS,
 							request.METHOD_DELETE,
 							request.METHOD_CONNECT,
-							request.METHOD_TRACE:
+							request.METHOD_TRACE,
+							request.METHOD_ANY:
+
 						default:
 							err = errors.New(fmt.Sprintf("unsupported http method : %s", value))
 							logrus.Errorf("mapping unsupported api failed. %s.", err)
