@@ -116,7 +116,9 @@ func (m *SwaggerSpec) parseApi(path string, api *ApiItem) (err error) {
 	// uri data
 	if api.UriData != nil {
 		for _, pathField := range api.UriData.Fields {
-			operation.Parameters = append(operation.Parameters, *FieldBasicParameter("path", pathField))
+			basicParameter := *FieldBasicParameter("path", pathField)
+			basicParameter.Required = true // require uri data
+			operation.Parameters = append(operation.Parameters, basicParameter)
 		}
 	}
 
