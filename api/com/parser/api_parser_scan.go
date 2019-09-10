@@ -262,10 +262,10 @@ func ParsePkgApis(
 		if parseRequestData {
 			// parse types
 			typesConf := types.Config{
-				Importer: importer.Default(),
+				//Importer: importer.Default(),
 			}
 
-			//typesConf.Importer = importer.For("source", nil)
+			typesConf.Importer = importer.For("source", nil)
 
 			// cur package
 			pkg, errCheck := typesConf.Check(apiPackageDir, fileSet, astFiles, typesInfo)
