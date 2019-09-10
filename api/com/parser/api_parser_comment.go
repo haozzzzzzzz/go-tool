@@ -1,7 +1,9 @@
 package parser
 
 import (
+	"bufio"
 	"encoding/json"
+	"io"
 	"regexp"
 
 	"reflect"
@@ -14,79 +16,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-//func ParseApisFromComments(dir string) (
-//	commonParams *ApiItemParams,
-//	apis []*ApiItem,
-//	err error,
-//) {
-//	apis = make([]*ApiItem, 0)
-//	pkgDirs := make([]string, 0)
-//	pkgDirs, err = file.SearchFileNames(dir, func(fileInfo os.FileInfo) bool {
-//		if fileInfo.IsDir() {
-//			return true
-//		} else {
-//			return false
-//		}
-//	}, true)
-//	pkgDirs = append(pkgDirs, dir)
-//
-//	for _, pkgDir := range pkgDirs {
-//		subCommonParams, subApis, errParse := ParseApisFromPkgComment(pkgDir)
-//		err = errParse
-//		if nil != err {
-//			logrus.Errorf("parse apis from pkg comment failed. pkgDir: %s, error: %s.", pkgDir, err)
-//			return
-//		}
-//
-//		apis = append(apis, subApis...)
-//
-//		if commonParams == nil {
-//			commonParams = subCommonParams
-//		} else {
-//			logrus.Warnf("found multi common params, and params: %#v was choosed, the other one is: %#v", commonParams, subCommonParams)
-//		}
-//	}
-//
-//	return
-//}
-//
-//func ParseApisFromPkgComment(
-//	pkgDir string,
-//) (
-//	commonParams *ApiItemParams,
-//	apis []*ApiItem,
-//	err error,
-//) {
-//	apis = make([]*ApiItem, 0)
-//	fileSet := token.NewFileSet()
-//	pkgs, err := parser.ParseDir(fileSet, pkgDir, nil, parser.ParseComments)
-//	if nil != err {
-//		logrus.Errorf("parse pkg dir failed. pkgDir: %s, error: %s.", pkgDir, err)
-//		return
-//	}
-//
-//	for _, pkg := range pkgs {
-//		for _, astFile := range pkg.Files {
-//			for _, commentGroup := range astFile.Comments {
-//				for _, comment := range commentGroup.List {
-//					tempApis, errParse := ParseApisFromPkgCommentText(
-//						fileSet,
-//						astFile,
-//						comment,
-//					)
-//					err = errParse
-//					if nil != err {
-//						logrus.Errorf("parse apis from pkg comment text failed. text: %s, error: %s.", comment.Text, err)
-//						return
-//					}
-//
-//					apis = append(apis, tempApis...)
-//				}
-//			}
-//		}
-//	}
-//	return
-//}
+const BlockTagKeyCommonStart = "api_doc_common_start"
+const BlockTagKeyCommonEnd = "api_doc_common_end"
+const BlockTagKeyStart = "api_doc_start"
+const BlockTagKeyEnd = "api_doc_end"
+
+const LineTagKeyHttpMethod = "api_doc_http_method"
+const LineTagKeyRelativePaths = "api_doc_relative_paths"
 
 func ParseApisFromPkgCommentText(
 	fileName string,
@@ -107,8 +43,8 @@ func ParseApisFromPkgCommentText(
 		pkgExportedPath,
 		pkgRelAlias,
 		commentText,
-		"@api_doc_common_start",
-		"@api_doc_common_end",
+		"@"+BlockTagKeyCommonStart,
+		"@"+BlockTagKeyCommonEnd,
 	)
 	if nil != err {
 		logrus.Errorf("parse api common params from comment failed. error: %s.", err)
@@ -127,8 +63,8 @@ func ParseApisFromPkgCommentText(
 		pkgExportedPath,
 		pkgRelAlias,
 		commentText,
-		"@api_doc_start",
-		"@api_doc_end",
+		"@"+BlockTagKeyStart,
+		"@"+BlockTagKeyEnd,
 	)
 	if nil != err {
 		logrus.Errorf("parse apis from comment failed. error: %s.", err)
@@ -394,5 +330,120 @@ func commentApiRequestDataIType(
 		err = uerrors.Newf("unsupported type: %#v", typeDesc)
 
 	}
+	return
+}
+
+type ApiCommentTags struct {
+	Summary     string // 非tag的注释第一行是summary，其余是description
+	Description string
+
+	LineTagHttpMethod    string
+	LineTagRelativePaths []string
+}
+
+func (m *ApiCommentTags) FillApiItem(apiItem *ApiItem) {
+	if apiItem.Summary == "" {
+		apiItem.Summary = m.Summary
+	}
+
+	if apiItem.Description == "" {
+		apiItem.Description = m.Description
+	}
+
+	if apiItem.HttpMethod == "" {
+		apiItem.HttpMethod = m.LineTagHttpMethod
+	}
+
+	if len(apiItem.RelativePaths) == 0 {
+		apiItem.RelativePaths = m.LineTagRelativePaths
+	}
+
+	return
+}
+
+func NewApiCommentTags() *ApiCommentTags {
+	return &ApiCommentTags{
+		LineTagRelativePaths: make([]string, 0),
+	}
+}
+
+func ParseApiCommentTags(text string) (tags *ApiCommentTags, err error) {
+	tags = NewApiCommentTags()
+
+	// 去掉头部多余的*
+	text = strings.TrimSpace(text)
+	text = strings.Trim(text, "*")
+	text = strings.TrimSpace(text)
+
+	// read tags
+	strBuf := bufio.NewReader(strings.NewReader(text))
+	docReg, errC := regexp.Compile(`(?i:\@(.*?)\:)`)
+	err = errC
+	if nil != err || docReg == nil {
+		logrus.Errorf("compile line tag regexp failed. error: %s.", err)
+		return
+	}
+
+	noTagsText := ""
+	for {
+		bLine, _, errR := strBuf.ReadLine()
+		err = errR
+		if nil != err && err != io.EOF {
+			logrus.Errorf("read description failed. error: %s.", err)
+			return
+		}
+
+		if err == io.EOF {
+			err = nil
+			break
+		}
+
+		line := string(bLine)
+		matcheds := docReg.FindAllStringSubmatch(line, 1)
+		if len(matcheds) != 1 || len(matcheds[0]) != 2 {
+			if noTagsText == "" {
+				noTagsText = line
+			} else {
+				noTagsText += "\n" + line
+			}
+			continue
+		}
+
+		rawMatchedString := matcheds[0][0]
+		tagKey := strings.TrimSpace(matcheds[0][1])
+		switch tagKey {
+		case LineTagKeyHttpMethod:
+			tags.LineTagHttpMethod = strings.TrimSpace(strings.Replace(line, rawMatchedString, "", 1))
+		case LineTagKeyRelativePaths:
+			strRelativePaths := strings.TrimSpace(strings.Replace(line, rawMatchedString, "", 1))
+			relPaths := strings.Split(strRelativePaths, ",")
+			for _, relPath := range relPaths {
+				relPath = strings.TrimSpace(relPath)
+				if relPath == "" {
+					continue
+				}
+
+				tags.LineTagRelativePaths = append(tags.LineTagRelativePaths, relPath)
+			}
+
+		default:
+			logrus.Warnf("unsupported api comment line tag: %s", tagKey)
+		}
+	}
+
+	// read summary description
+	strBuf = bufio.NewReader(strings.NewReader(noTagsText))
+	bLine, _, errRead := strBuf.ReadLine()
+	err = errRead
+	if nil != err {
+		logrus.Errorf("read api comment first line failed. error: %s.", err)
+		return
+	}
+
+	tags.Summary = string(bLine)
+	tags.Description = strings.Replace(noTagsText, tags.Summary, "", 1)
+	tags.Summary = strings.TrimSpace(tags.Summary)
+	tags.Description = strings.TrimSpace(tags.Description)
+
 	return
 }

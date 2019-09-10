@@ -267,11 +267,15 @@ func MergeApiItemParams(items ...*ApiItemParams) (params *ApiItemParams, err err
 	return
 }
 
+const ApiHandlerFuncTypeGinbuilderHandleFunc uint8 = 1
+const ApiHandlerFuncTypeGinHandlerFunc uint8 = 2
+
 type ApiItem struct {
 	ApiItemParams
 
-	ApiHandlerFunc string `validate:"required" json:"api_handler_func" yaml:"api_handler_func"` // handler 函数名
-	SourceFile     string `validate:"required" json:"source_file" yaml:"source_file"`           // 源码
+	ApiHandlerFuncType uint8  `json:"api_handler_func_type" yaml:"api_handler_func_type"`
+	ApiHandlerFunc     string `validate:"required" json:"api_handler_func" yaml:"api_handler_func"` // handler 函数名
+	SourceFile         string `validate:"required" json:"source_file" yaml:"source_file"`           // 源码
 
 	PackageName         string `validate:"required" json:"api_handler_package" yaml:"api_handler_package"` // handler 所在的包名
 	PackageExportedPath string `json:"package_exported" yaml:"package_exported"`                           // 被别人引入的path

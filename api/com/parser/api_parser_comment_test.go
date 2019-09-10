@@ -70,3 +70,37 @@ func TestParseApisFromPkgCommentText(t *testing.T) {
 		fmt.Printf("params: %#v\n", params)
 	}
 }
+
+func TestParseCommentLineTags(t *testing.T) {
+	//docReg, err := regexp.Compile(`(?i:\@(.*?)\:)()`)
+	//if nil != err {
+	//	t.Error(err)
+	//	return
+	//}
+	//
+	//str := `
+	//	@api_doc_http_method: xdfsfsd
+	//	sfsdfsdf
+	//`
+	//
+	//matcheds := docReg.FindAllStringSubmatch(str, 1)
+	//for _, matched := range matcheds {
+	//	fmt.Println(matched)
+	//	fmt.Println(len(matched))
+	//}
+
+	text := `
+		@api_doc_http_method: get
+		@api_doc_relative_paths: /say, /hi
+		asdfasdfad
+		adfkajdla  asdfasdf
+		safsdfajlskf
+	`
+	tags, err := ParseApiCommentTags(text)
+	if nil != err {
+		t.Error(err)
+		return
+	}
+
+	fmt.Printf("%#v\n", tags)
+}
