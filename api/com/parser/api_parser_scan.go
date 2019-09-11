@@ -560,7 +560,7 @@ func ParsePkgApis(
 					continue
 				}
 
-				err = ParseGinHandlerFuncApi(apiItem, funcDecl, typesInfo)
+				err = ParseGinHandlerFuncApi(apiItem, funcDecl, typesInfo, parseRequestData)
 				if nil != err {
 					logrus.Errorf("parse gin HandlerFunc failed. error: %s.", err)
 					return
@@ -738,6 +738,7 @@ func ParseGinHandlerFuncApi(
 	apiItem *ApiItem,
 	funcDecl *ast.FuncDecl,
 	typesInfo *types.Info,
+	parseRequestData bool,
 ) (err error) {
 	apiItem.ApiHandlerFunc = funcDecl.Name.Name
 	apiItem.ApiHandlerFuncType = ApiHandlerFuncTypeGinHandlerFunc
@@ -755,6 +756,10 @@ func ParseGinHandlerFuncApi(
 		if commentTags != nil {
 			commentTags.FillApiItem(apiItem)
 		}
+	}
+
+	if !parseRequestData {
+		return
 	}
 
 	// parse request data
@@ -838,7 +843,7 @@ func parseType(
 		tStructType := t.(*types.Struct)
 
 		typeAstExpr := FindStructAstExprFromInfoTypes(info, tStructType)
-		if typeAstExpr == nil { // 不在当前源码内的定义会解析不到
+		if typeAstExpr == nil { // 找不到expr
 			hasFieldsJsonTag := false
 
 			numFields := tStructType.NumFields()
@@ -878,7 +883,7 @@ func parseType(
 			if typeAstExpr != nil { // 找到声明
 				astStructType, ok := typeAstExpr.(*ast.StructType)
 				if !ok {
-					logrus.Printf("parse struct type failed. expr: %#v, type: %#v", typeAstExpr, tStructType)
+					logrus.Errorf("parse struct type failed. expr: %#v, type: %#v", typeAstExpr, tStructType)
 					return
 				}
 
@@ -990,8 +995,13 @@ func convertExpr(expr ast.Expr) (newExpr ast.Expr) {
 // struct expr匹配类型
 func FindStructAstExprFromInfoTypes(info *types.Info, t *types.Struct) (expr ast.Expr) {
 	for tExpr, tType := range info.Types {
-		tStruct, ok := tType.Type.(*types.Struct)
-		if !ok {
+		var tStruct *types.Struct
+		switch tType.Type.(type) {
+		case *types.Struct:
+			tStruct = tType.Type.(*types.Struct)
+		}
+
+		if tStruct == nil {
 			continue
 		}
 
@@ -1006,7 +1016,6 @@ func FindStructAstExprFromInfoTypes(info *types.Info, t *types.Struct) (expr ast
 
 		} else if tStruct.NumFields() == t.NumFields() {
 			// 字段一样
-
 			numFields := tStruct.NumFields()
 			notMatch := false
 			for i := 0; i < numFields; i++ {

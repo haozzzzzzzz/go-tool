@@ -2,12 +2,13 @@ package parser
 
 import (
 	"fmt"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
+
 	"github.com/haozzzzzzzz/go-rapid-development/api/request"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/file"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
 	"github.com/haozzzzzzzz/go-tool/api/com/project"
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
 
 	"github.com/haozzzzzzzz/go-tool/lib/gofmt"
 
@@ -79,19 +80,30 @@ func (m *ApiParser) GenerateRoutersSourceFile(apis []*ApiItem) (err error) {
 			strHandleFunc = fmt.Sprintf("%s.%s", apiItem.PackageRelAlias, apiItem.ApiHandlerFunc)
 		}
 
+		handleFuncName := ""
+		switch apiItem.ApiHandlerFuncType {
+		case ApiHandlerFuncTypeGinHandlerFunc:
+			handleFuncName = strHandleFunc
+		case ApiHandlerFuncTypeGinbuilderHandleFunc:
+			handleFuncName = fmt.Sprintf("%s.GinHandler", strHandleFunc)
+		default:
+			continue
+		}
+
 		for _, uri := range apiItem.RelativePaths {
 			var str string
 			switch apiItem.HttpMethod {
 			case request.METHOD_ANY:
-				str = fmt.Sprintf("    engine.Any(\"%s\", %s.GinHandler)", uri, strHandleFunc)
+				str = fmt.Sprintf("    engine.Any(\"%s\", %s)", uri, handleFuncName)
 			default:
-				str = fmt.Sprintf("    engine.Handle(\"%s\", \"%s\", %s.GinHandler)", apiItem.HttpMethod, uri, strHandleFunc)
+				str = fmt.Sprintf("    engine.Handle(\"%s\", \"%s\", %s)", apiItem.HttpMethod, uri, handleFuncName)
 			}
 
 			if str == "" {
 				logrus.Errorf("gen code for api item failed. api: %#v, error: %s.", apiItem, err)
 				return
 			}
+
 			strRouters = append(strRouters, str)
 		}
 
