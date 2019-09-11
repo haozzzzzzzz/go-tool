@@ -432,18 +432,21 @@ func ParseApiCommentTags(text string) (tags *ApiCommentTags, err error) {
 	}
 
 	// read summary description
-	strBuf = bufio.NewReader(strings.NewReader(noTagsText))
-	bLine, _, errRead := strBuf.ReadLine()
-	err = errRead
-	if nil != err {
-		logrus.Errorf("read api comment first line failed. error: %s.", err)
-		return
-	}
+	if noTagsText != "" {
+		strBuf = bufio.NewReader(strings.NewReader(noTagsText))
+		bLine, _, errRead := strBuf.ReadLine()
+		err = errRead
+		if nil != err {
+			logrus.Errorf("read api comment first line failed. error: %s.", err)
+			return
+		}
 
-	tags.Summary = string(bLine)
-	tags.Description = strings.Replace(noTagsText, tags.Summary, "", 1)
-	tags.Summary = strings.TrimSpace(tags.Summary)
-	tags.Description = strings.TrimSpace(tags.Description)
+		tags.Summary = string(bLine)
+		tags.Description = strings.Replace(noTagsText, tags.Summary, "", 1)
+		tags.Summary = strings.TrimSpace(tags.Summary)
+		tags.Description = strings.TrimSpace(tags.Description)
+
+	}
 
 	return
 }
