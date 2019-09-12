@@ -151,7 +151,14 @@ func (m *SwaggerSpec) parseApi(path string, api *ApiItem) (err error) {
 	successResponse := spec.Response{}
 	successResponse.Description = "success"
 	if api.RespData != nil {
-		successResponse.Schema = ITypeToSwaggerSchema(SuccessResponseStructType(api.RespData))
+
+		// wrap data for ginbuilder.HandleFunc
+		if api.ApiHandlerFuncType == ApiHandlerFuncTypeGinbuilderHandleFunc {
+			successResponse.Schema = ITypeToSwaggerSchema(SuccessResponseStructType(api.RespData))
+		} else {
+			successResponse.Schema = ITypeToSwaggerSchema(api.RespData)
+		}
+
 	}
 
 	operation.Responses = &spec.Responses{
