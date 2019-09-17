@@ -774,13 +774,13 @@ func parseApiFuncBody(
 					continue
 				}
 
-				iType := parseType(typesInfo, typeVar.Type())
-				if iType == nil {
-					continue
-				}
-
 				switch ident.Name {
 				case "headerData":
+					iType := parseType(typesInfo, typeVar.Type())
+					if iType == nil {
+						continue
+					}
+
 					structType, ok := iType.(*StructType)
 					if ok {
 						apiItem.HeaderData = structType
@@ -789,6 +789,11 @@ func parseApiFuncBody(
 					}
 
 				case "pathData", "uriData":
+					iType := parseType(typesInfo, typeVar.Type())
+					if iType == nil {
+						continue
+					}
+
 					structType, ok := iType.(*StructType)
 					if ok {
 						apiItem.UriData = structType
@@ -797,6 +802,11 @@ func parseApiFuncBody(
 					}
 
 				case "queryData":
+					iType := parseType(typesInfo, typeVar.Type())
+					if iType == nil {
+						continue
+					}
+
 					structType, ok := iType.(*StructType)
 					if ok {
 						apiItem.QueryData = structType
@@ -805,6 +815,11 @@ func parseApiFuncBody(
 					}
 
 				case "postData":
+					iType := parseType(typesInfo, typeVar.Type())
+					if iType == nil {
+						continue
+					}
+
 					structType, ok := iType.(*StructType)
 					if ok {
 						apiItem.PostData = structType
@@ -813,6 +828,11 @@ func parseApiFuncBody(
 					}
 
 				case "respData":
+					iType := parseType(typesInfo, typeVar.Type())
+					if iType == nil {
+						continue
+					}
+
 					apiItem.RespData = iType
 
 				}
@@ -966,9 +986,10 @@ func parseType(
 		iType = NewInterfaceType()
 
 	default:
-		fmt.Printf("parse unsupported type %#v\n", t)
+		logrus.Warnf("parse unsupported type %#v", t)
 
 	}
+
 	return
 }
 
