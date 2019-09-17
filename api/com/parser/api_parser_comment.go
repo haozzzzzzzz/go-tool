@@ -21,8 +21,10 @@ const BlockTagKeyCommonEnd = "api_doc_common_end"
 const BlockTagKeyStart = "api_doc_start"
 const BlockTagKeyEnd = "api_doc_end"
 
-const LineTagKeyHttpMethod = "api_doc_http_method"
-const LineTagKeyRelativePaths = "api_doc_relative_paths"
+const LineTagKeyDocRoute = "api_doc_route"
+const LineTagKeyDocHttpMethod = "api_doc_http_method"
+const LineTagKeyDocRelativePaths = "api_doc_relative_paths"
+const LineTagKeyDocTags = "api_doc_tags"
 
 func ParseApisFromPkgCommentText(
 	fileName string,
@@ -337,8 +339,11 @@ type ApiCommentTags struct {
 	Summary     string // 非tag的注释第一行是summary，其余是description
 	Description string
 
-	LineTagHttpMethod    string
-	LineTagRelativePaths []string
+	LineTagDocRoute string
+
+	LineTagDocHttpMethod    string
+	LineTagDocRelativePaths []string
+	LineTagDocTags          []string
 }
 
 func (m *ApiCommentTags) FillApiItem(apiItem *ApiItem) {
@@ -351,11 +356,15 @@ func (m *ApiCommentTags) FillApiItem(apiItem *ApiItem) {
 	}
 
 	if apiItem.HttpMethod == "" {
-		apiItem.HttpMethod = m.LineTagHttpMethod
+		apiItem.HttpMethod = m.LineTagDocHttpMethod
 	}
 
 	if len(apiItem.RelativePaths) == 0 {
-		apiItem.RelativePaths = m.LineTagRelativePaths
+		apiItem.RelativePaths = m.LineTagDocRelativePaths
+	}
+
+	if len(apiItem.Tags) == 0 {
+		apiItem.Tags = m.LineTagDocTags
 	}
 
 	return
@@ -363,7 +372,7 @@ func (m *ApiCommentTags) FillApiItem(apiItem *ApiItem) {
 
 func NewApiCommentTags() *ApiCommentTags {
 	return &ApiCommentTags{
-		LineTagRelativePaths: make([]string, 0),
+		LineTagDocRelativePaths: make([]string, 0),
 	}
 }
 
@@ -409,13 +418,7 @@ func ParseApiCommentTags(text string) (tags *ApiCommentTags, err error) {
 			continue
 		}
 
-		rawMatchedString := matcheds[0][0]
-		tagKey := strings.TrimSpace(matcheds[0][1])
-		switch tagKey {
-		case LineTagKeyHttpMethod:
-			tags.LineTagHttpMethod = strings.TrimSpace(strings.Replace(line, rawMatchedString, "", 1))
-		case LineTagKeyRelativePaths:
-			strRelativePaths := strings.TrimSpace(strings.Replace(line, rawMatchedString, "", 1))
+		var setTagsRelativePaths = func(strRelativePaths string) {
 			relPaths := strings.Split(strRelativePaths, ",")
 			for _, relPath := range relPaths {
 				relPath = strings.TrimSpace(relPath)
@@ -423,12 +426,57 @@ func ParseApiCommentTags(text string) (tags *ApiCommentTags, err error) {
 					continue
 				}
 
-				tags.LineTagRelativePaths = append(tags.LineTagRelativePaths, relPath)
+				tags.LineTagDocRelativePaths = append(tags.LineTagDocRelativePaths, relPath)
+			}
+		}
+
+		var setTagsTags = func(strDocTags string) {
+			docTags := strings.Split(strDocTags, ",")
+			for _, docTag := range docTags {
+				docTag = strings.TrimSpace(docTag)
+				if docTag == "" {
+					continue
+				}
+
+				tags.LineTagDocTags = append(tags.LineTagDocTags, docTag)
+			}
+		}
+
+		rawMatchedString := matcheds[0][0]
+		tagKey := strings.TrimSpace(matcheds[0][1])
+		switch tagKey {
+		case LineTagKeyDocHttpMethod:
+			tags.LineTagDocHttpMethod = strings.TrimSpace(strings.Replace(line, rawMatchedString, "", 1))
+
+		case LineTagKeyDocRelativePaths:
+			strRelativePaths := strings.TrimSpace(strings.Replace(line, rawMatchedString, "", 1))
+			setTagsRelativePaths(strRelativePaths)
+
+		case LineTagKeyDocTags:
+			strDocTags := strings.TrimSpace(strings.Replace(line, rawMatchedString, "", 1))
+			setTagsTags(strDocTags)
+
+		case LineTagKeyDocRoute:
+			strRoute := strings.TrimSpace(strings.Replace(line, rawMatchedString, "", 1))
+			strParts := strings.Split(strRoute, "|")
+			lenParts := len(strParts)
+			if lenParts > 0 {
+				tags.LineTagDocHttpMethod = strings.TrimSpace(strParts[0])
+			}
+
+			if lenParts > 1 {
+				setTagsRelativePaths(strParts[1])
+			}
+
+			if lenParts > 2 {
+				setTagsTags(strParts[2])
 			}
 
 		default:
 			logrus.Warnf("unsupported api comment line tag: %s", tagKey)
+
 		}
+
 	}
 
 	// read summary description

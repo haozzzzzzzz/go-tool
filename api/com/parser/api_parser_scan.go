@@ -58,17 +58,15 @@ func (m *ApiParser) ScanApis(
 	sortedApiUriKeys := make([]string, 0)
 	mapApi := make(map[string]*ApiItem)
 	for _, oneApi := range apis {
-		if oneApi.RelativePaths == nil || oneApi.HttpMethod == "" { // required relative paths and http method
+		if oneApi.RelativePaths == nil || len(oneApi.RelativePaths) == 0 || oneApi.HttpMethod == "" { // required relative paths and http method
 			logrus.Warnf("api need to declare relative paths and http method. func name: %s", oneApi.ApiHandlerFunc)
 			continue
 		}
 
-		for _, relPath := range oneApi.RelativePaths {
-			uriKey := m.apiUrlKey(relPath, oneApi.HttpMethod)
-			sortedApiUriKeys = append(sortedApiUriKeys, uriKey)
-			mapApi[uriKey] = oneApi
-		}
-
+		relPath := oneApi.RelativePaths[0] // use first relative paths to sort
+		uriKey := m.apiUrlKey(relPath, oneApi.HttpMethod)
+		sortedApiUriKeys = append(sortedApiUriKeys, uriKey)
+		mapApi[uriKey] = oneApi
 	}
 
 	sort.Strings(sortedApiUriKeys)
@@ -580,26 +578,6 @@ func ParsePkgApis(
 	return
 }
 
-func parseApiRequestData(
-	info *types.Info,
-	astIdent *ast.Ident,
-) (dataType *StructType) {
-	identType := info.Defs[astIdent]
-	typeVar, ok := identType.(*types.Var)
-	if !ok {
-		return
-	}
-
-	iType := parseType(info, typeVar.Type())
-	if iType != nil {
-		dataType, _ = iType.(*StructType)
-	} else {
-		logrus.Warnf("parse api request nil: %#v\n", typeVar)
-	}
-
-	return
-}
-
 func ParseGinbuilderHandleFuncApi(
 	apiItem *ApiItem,
 	genDel *ast.GenDecl,
@@ -609,7 +587,7 @@ func ParseGinbuilderHandleFuncApi(
 	typesInfo *types.Info,
 	parseRequestData bool,
 ) (err error) {
-	// ginbuild.HandlerFunc obj
+	// ginbuilder.HandlerFunc obj
 	apiItem.ApiHandlerFunc = obj.Name
 	apiItem.ApiHandlerFuncType = ApiHandlerFuncTypeGinbuilderHandleFunc
 
@@ -790,17 +768,53 @@ func parseApiFuncBody(
 					continue
 				}
 
+				identType := typesInfo.Defs[ident]
+				typeVar, ok := identType.(*types.Var)
+				if !ok {
+					continue
+				}
+
+				iType := parseType(typesInfo, typeVar.Type())
+				if iType == nil {
+					continue
+				}
+
 				switch ident.Name {
 				case "headerData":
-					apiItem.HeaderData = parseApiRequestData(typesInfo, ident)
+					structType, ok := iType.(*StructType)
+					if ok {
+						apiItem.HeaderData = structType
+					} else {
+						logrus.Warnf("header data is not struct type")
+					}
+
 				case "pathData", "uriData":
-					apiItem.UriData = parseApiRequestData(typesInfo, ident)
+					structType, ok := iType.(*StructType)
+					if ok {
+						apiItem.UriData = structType
+					} else {
+						logrus.Warnf("uri data is not struct type")
+					}
+
 				case "queryData":
-					apiItem.QueryData = parseApiRequestData(typesInfo, ident)
+					structType, ok := iType.(*StructType)
+					if ok {
+						apiItem.QueryData = structType
+					} else {
+						logrus.Warnf("query data is not struct type")
+					}
+
 				case "postData":
-					apiItem.PostData = parseApiRequestData(typesInfo, ident)
+					structType, ok := iType.(*StructType)
+					if ok {
+						apiItem.PostData = structType
+					} else {
+						logrus.Warnf("post data is not struct type")
+					}
+
 				case "respData":
-					apiItem.RespData = parseApiRequestData(typesInfo, ident)
+					apiItem.RespData = iType
+
 				}
 			}
 

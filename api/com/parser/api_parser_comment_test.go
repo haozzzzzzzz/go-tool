@@ -89,9 +89,16 @@ func TestParseCommentLineTags(t *testing.T) {
 	//	fmt.Println(len(matched))
 	//}
 
+	//text := `
+	//	@api_doc_http_method: get
+	//	@api_doc_relative_paths: /say, /hi
+	//	@api_doc_tags: 666,666,666
+	//	asdfasdfad
+	//	adfkajdla  asdfasdf
+	//	safsdfajlskf
+	//`
 	text := `
-		@api_doc_http_method: get
-		@api_doc_relative_paths: /say, /hi
+		@api_doc_route: GET|/api/test/v1/say_hi_1,/api/test_web/v1/say_hi_2|test,test,test2
 		asdfasdfad
 		adfkajdla  asdfasdf
 		safsdfajlskf

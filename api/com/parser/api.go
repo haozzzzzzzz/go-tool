@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
 	"github.com/sirupsen/logrus"
+	"reflect"
 	"strings"
 )
 
@@ -174,7 +175,7 @@ type ApiItemParams struct {
 	UriData    *StructType `json:"uri_data" yaml:"uri_data"`
 	QueryData  *StructType `json:"query_data" yaml:"query_data"`
 	PostData   *StructType `json:"post_data" yaml:"post_data"`
-	RespData   *StructType `json:"response_data" yaml:"response_data"`
+	RespData   IType       `json:"response_data" yaml:"response_data"`
 }
 
 func NewApiItemParams() *ApiItemParams {
@@ -183,7 +184,7 @@ func NewApiItemParams() *ApiItemParams {
 		UriData:    NewStructType(),
 		QueryData:  NewStructType(),
 		PostData:   NewStructType(),
-		RespData:   NewStructType(),
+		RespData:   NewStructType(), // default
 	}
 }
 
@@ -241,16 +242,31 @@ func (m *ApiItemParams) MergeApiItemParams(items ...*ApiItemParams) (err error) 
 			}
 		}
 
-		if item.RespData != nil && len(item.RespData.Fields) > 0 {
+		if item.RespData != nil {
 			if m.RespData == nil {
 				m.RespData = NewStructType()
 			}
 
-			err = m.RespData.AddFields(item.RespData.Fields...)
-			if nil != err {
-				logrus.Errorf("add resp data fields failed. error: %s.", err)
-				return
+			switch item.RespData.(type) {
+			case *StructType: // only merge struct type
+				itemRespStruct := item.RespData.(*StructType)
+				mRespStruct, ok := m.RespData.(*StructType)
+				if ok {
+					err = mRespStruct.AddFields(itemRespStruct.Fields...)
+					if nil != err {
+						logrus.Errorf("add resp data fields failed. error: %s.", err)
+						return
+					}
+				} else {
+					logrus.Warnf("can not merge resp data, because of different type. %s %s", reflect.TypeOf(item.RespData), reflect.TypeOf(m.RespData))
+
+				}
+
+			default:
+				logrus.Warnf("only struct type resp data can be merged. type: %s", reflect.TypeOf(item.RespData))
+
 			}
+
 		}
 
 	}
@@ -285,8 +301,9 @@ type ApiItem struct {
 	HttpMethod    string   `validate:"required" json:"http_method" yaml:"http_method"`
 	RelativePaths []string `validate:"required" json:"relative_paths" yaml:"relative_paths"`
 
-	Summary     string `json:"summary" yaml:"summary"`
-	Description string `json:"description" yaml:"description"`
+	Summary     string   `json:"summary" yaml:"summary"`
+	Description string   `json:"description" yaml:"description"`
+	Tags        []string `json:"tags" yaml:"tags"` // 标签
 }
 
 func (m *ApiItem) PackageFuncName() string {
@@ -300,7 +317,7 @@ func (m *ApiItem) PackageFuncName() string {
 //	Data       interface{} `json:"data"`
 //}
 func SuccessResponseStructType(
-	respData *StructType,
+	respData IType,
 ) (successResp *StructType) {
 	successResp = NewStructType()
 	successResp.Name = "SuccessResponse"
