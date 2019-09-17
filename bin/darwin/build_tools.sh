@@ -4,7 +4,9 @@ export GOOS=darwin
 export GOARCH=amd64
 
 # api tool
-go build -o api ../../api/main.go
+build_time=`date +"%Y-%m-%d %H:%M:%S %Z"`
+#echo $build_time
+go build -ldflags="-X 'main.BuildTime=${build_time}'" -o api ../../api/main.go
 
 # code tool
 go build -o code ../../code/main.go

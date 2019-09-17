@@ -14,8 +14,14 @@
 
 package main
 
-import "github.com/haozzzzzzzz/go-tool/api/cmd"
+import (
+	"github.com/haozzzzzzzz/go-tool/api/cmd"
+	"github.com/haozzzzzzzz/go-tool/api/info"
+)
+
+var BuildTime = "" // 构建时间，由链接器传入
 
 func main() {
+	info.BuildTime = BuildTime
 	cmd.Execute()
 }
