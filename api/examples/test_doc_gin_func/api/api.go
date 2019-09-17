@@ -52,7 +52,7 @@ func SayHiGinHandlerFunc(context *gin.Context) {
 	type ResponseData struct {
 		Msg string `json:"msg"` // 问候信息
 	}
-	respData := make(map[string]*RespDataItem)
+	respData := &ResponseData{}
 
 	context.JSON(http.StatusOK, respData)
 	return
