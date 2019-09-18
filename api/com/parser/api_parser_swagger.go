@@ -84,34 +84,14 @@ func (m *SwaggerSpec) parseApi(path string, api *ApiItem) (err error) {
 
 	path = strings.Join(subPaths, "/")
 
-	pathItem := &spec.PathItem{}
 	operation := &spec.Operation{}
+	operation.ID = fmt.Sprintf("%s-%s", api.HttpMethod, path)
 	operation.Consumes = []string{request.MIME_JSON}
 	operation.Produces = []string{request.MIME_JSON}
 	operation.Summary = api.Summary
 	operation.Description = api.Description
-	operation.ID = fmt.Sprintf("%s-%s", api.HttpMethod, path)
 	operation.Parameters = make([]spec.Parameter, 0)
-
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#pathsObject
-	switch api.HttpMethod {
-	case request.METHOD_GET:
-		pathItem.Get = operation
-	case request.METHOD_POST:
-		pathItem.Post = operation
-	case request.METHOD_PUT:
-		pathItem.Put = operation
-	case request.METHOD_DELETE:
-		pathItem.Delete = operation
-	case request.METHOD_OPTIONS:
-		pathItem.Options = operation
-	case request.METHOD_HEAD:
-		pathItem.Head = operation
-	case request.METHOD_PATCH:
-		pathItem.Patch = operation
-	default:
-		logrus.Warnf("not supported method for swagger spec. method: %s", api.HttpMethod)
-	}
+	operation.Tags = api.Tags
 
 	// uri data
 	if api.UriData != nil {
@@ -167,6 +147,59 @@ func (m *SwaggerSpec) parseApi(path string, api *ApiItem) (err error) {
 				200: successResponse,
 			},
 		},
+	}
+
+	pathItem := &spec.PathItem{}
+
+	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#pathsObject
+	switch api.HttpMethod {
+	case request.METHOD_GET:
+		pathItem.Get = operation
+	case request.METHOD_POST:
+		pathItem.Post = operation
+	case request.METHOD_PUT:
+		pathItem.Put = operation
+	case request.METHOD_DELETE:
+		pathItem.Delete = operation
+	case request.METHOD_OPTIONS:
+		pathItem.Options = operation
+	case request.METHOD_HEAD:
+		pathItem.Head = operation
+	case request.METHOD_PATCH:
+		pathItem.Patch = operation
+
+	case request.METHOD_ANY:
+		operationGet := *operation
+		operationGet.ID = fmt.Sprintf("%s-%s", request.METHOD_GET, path)
+
+		operationPost := *operation
+		operationPost.ID = fmt.Sprintf("%s-%s", request.METHOD_POST, path)
+
+		operationPut := *operation
+		operationPut.ID = fmt.Sprintf("%s-%s", request.METHOD_PUT, path)
+
+		operationDelete := *operation
+		operationDelete.ID = fmt.Sprintf("%s-%s", request.METHOD_DELETE, path)
+
+		operationOptions := *operation
+		operationOptions.ID = fmt.Sprintf("%s-%s", request.METHOD_OPTIONS, path)
+
+		operationHead := *operation
+		operationHead.ID = fmt.Sprintf("%s-%s", request.METHOD_HEAD, path)
+
+		operationPatch := *operation
+		operationPatch.ID = fmt.Sprintf("%s-%s", request.METHOD_PATCH, path)
+
+		pathItem.Get = &operationGet
+		pathItem.Post = &operationPost
+		pathItem.Put = &operationPut
+		pathItem.Delete = &operationDelete
+		pathItem.Options = &operationOptions
+		pathItem.Head = &operationHead
+		pathItem.Patch = &operationPatch
+
+	default:
+		logrus.Warnf("not supported method for swagger spec. method: %s", api.HttpMethod)
 	}
 
 	m.Swagger.PathsAdd(path, pathItem)
