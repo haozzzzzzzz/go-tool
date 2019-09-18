@@ -250,6 +250,10 @@ func (m *ApiItemParams) MergeApiItemParams(items ...*ApiItemParams) (err error) 
 			switch item.RespData.(type) {
 			case *StructType: // only merge struct type
 				itemRespStruct := item.RespData.(*StructType)
+				if itemRespStruct == nil {
+					break
+				}
+
 				mRespStruct, ok := m.RespData.(*StructType)
 				if ok {
 					err = mRespStruct.AddFields(itemRespStruct.Fields...)
@@ -257,6 +261,7 @@ func (m *ApiItemParams) MergeApiItemParams(items ...*ApiItemParams) (err error) 
 						logrus.Errorf("add resp data fields failed. error: %s.", err)
 						return
 					}
+
 				} else {
 					logrus.Warnf("can not merge resp data, because of different type. %s %s", reflect.TypeOf(item.RespData), reflect.TypeOf(m.RespData))
 

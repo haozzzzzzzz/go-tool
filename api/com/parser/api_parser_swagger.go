@@ -52,12 +52,13 @@ func (m *SwaggerSpec) ParseApis() (
 		paths := api.RelativePaths
 		for _, path := range paths { // if api has handler with multi paths, gen spec for each path
 
-			// merge common field
-			err = api.ApiItemParams.MergeApiItemParams(m.commonParams)
-			if nil != err {
-				fmt.Println(api.ApiItemParams)
-				logrus.Errorf("merge common fields failed. error: %s.", err)
-				return
+			if m.commonParams != nil {
+				// merge common field
+				err = api.ApiItemParams.MergeApiItemParams(m.commonParams)
+				if nil != err {
+					logrus.Errorf("merge common fields failed. error: %s.", err)
+					return
+				}
 			}
 
 			err = m.parseApi(path, api)
