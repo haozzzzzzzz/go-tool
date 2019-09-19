@@ -406,6 +406,13 @@ func ParsePkgApis(
 
 	for _, astFile := range astFiles { // 遍历当前package的语法树
 		fileName := astFileNames[astFile]
+
+		// skip *_test.go and routers.go
+		if strings.HasSuffix(fileName, "_test.go") || strings.HasSuffix(fileName, "/api/routers.go") {
+			logrus.Infof("Skip parsing %s", fileName)
+			continue
+		}
+
 		logrus.Infof("Parsing %s", fileName)
 
 		// package
