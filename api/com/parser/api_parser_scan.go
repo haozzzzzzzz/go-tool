@@ -423,40 +423,17 @@ func ParsePkgApis(
 
 		}
 
-		if parseCommentText {
-			// scan package comment apis
-			for _, commentGroup := range astFile.Comments {
-				for _, comment := range commentGroup.List {
-					subCommonParams, commentApis, errParse := ParseApisFromPkgCommentText(
-						fileName,
-						fileDir,
-						packageName,
-						pkgExportedPath,
-						pkgRelAlias,
-						comment.Text,
-					)
-					err = errParse
-					if nil != err {
-						logrus.Errorf("parse apis from pkg comment text failed. error: %s.", err)
-						return
-					}
-
-					apis = append(apis, commentApis...)
-
-					commonParams = append(commonParams, subCommonParams...)
-				}
-			}
-		}
+		apiFile := NewApiFile()
+		apiFile.SourceFile = fileName
+		apiFile.PackageName = packageName
+		apiFile.PackageExportedPath = pkgExportedPath
+		apiFile.PackageRelAlias = pkgRelAlias
+		apiFile.PackageDir = fileName
 
 		// search package api types
 		for _, decl := range astFile.Decls /*objName, obj := range astFile.Scope.Objects*/ { // 遍历顶层所有变量，寻找HandleFunc
 			apiItem := &ApiItem{
-				SourceFile:          fileName,
-				PackageName:         packageName,
-				PackageExportedPath: pkgExportedPath,
-				PackageRelAlias:     pkgRelAlias,
-				PackageDir:          fileDir,
-				RelativePaths:       make([]string, 0),
+				RelativePaths: make([]string, 0),
 			}
 
 			switch decl.(type) {
@@ -549,6 +526,49 @@ func ParsePkgApis(
 
 		}
 
+		// parse comment text
+		if parseCommentText {
+			// parse file package comment
+			if astFile.Doc != nil {
+				pkgComment := astFile.Doc.Text()
+				pkgTags, errParse := ParseCommentTags(pkgComment)
+				err = errParse
+				if nil != err {
+					logrus.Errorf("parse pkg comment tags failed. error: %s.", err)
+					return
+				}
+
+				if pkgTags != nil {
+					apiFile.MergeInfoFromCommentTags(pkgTags)
+				}
+
+			}
+
+			// scan file comment apis
+			for _, commentGroup := range astFile.Comments {
+				for _, comment := range commentGroup.List {
+					subCommonParams, commentApis, errParse := ParseApisFromPkgCommentText(
+						comment.Text,
+					)
+					err = errParse
+					if nil != err {
+						logrus.Errorf("parse apis from pkg comment text failed. error: %s.", err)
+						return
+					}
+
+					apis = append(apis, commentApis...)
+
+					commonParams = append(commonParams, subCommonParams...)
+				}
+			}
+
+		}
+
+		for _, api := range apis {
+			api.ApiFile = apiFile
+			api.MergeInfoFromApiInfo()
+		}
+
 	}
 
 	return
@@ -569,7 +589,7 @@ func ParseGinbuilderHandleFuncApi(
 
 	if genDel.Doc != nil {
 		apiComment := genDel.Doc.Text()
-		commentTags, errParse := ParseApiCommentTags(apiComment)
+		commentTags, errParse := ParseCommentTags(apiComment)
 		err = errParse
 		if nil != err {
 			logrus.Errorf("parse api comment tags failed. error: %s.", err)
@@ -577,7 +597,7 @@ func ParseGinbuilderHandleFuncApi(
 		}
 
 		if commentTags != nil {
-			commentTags.FillApiItem(apiItem)
+			apiItem.MergeInfoFomCommentTags(commentTags)
 		}
 
 	}
@@ -700,7 +720,7 @@ func ParseGinHandlerFuncApi(
 	// 读取注释
 	if funcDecl.Doc != nil {
 		apiComment := funcDecl.Doc.Text()
-		commentTags, errParse := ParseApiCommentTags(apiComment)
+		commentTags, errParse := ParseCommentTags(apiComment)
 		err = errParse
 		if nil != err {
 			logrus.Errorf("parse api comment tags failed. error: %s.", err)
@@ -708,7 +728,7 @@ func ParseGinHandlerFuncApi(
 		}
 
 		if commentTags != nil {
-			commentTags.FillApiItem(apiItem)
+			apiItem.MergeInfoFomCommentTags(commentTags)
 		}
 	}
 

@@ -65,19 +65,19 @@ func (m *ApiParser) GenerateRoutersSourceFile(apis []*ApiItem) (err error) {
 
 	for _, apiItem := range apis {
 		// imports
-		if apiItem.PackageRelAlias != "" { // 本目录下的不用加入
-			if apiItem.PackageExportedPath == "" {
-				err = uerrors.Newf("alias require exported path. alias: %s", apiItem.PackageRelAlias)
+		if apiItem.ApiFile.PackageRelAlias != "" { // 本目录下的不用加入
+			if apiItem.ApiFile.PackageExportedPath == "" {
+				err = uerrors.Newf("alias require exported path. alias: %s", apiItem.ApiFile.PackageRelAlias)
 				return
 			}
 
-			importsMap[apiItem.PackageExportedPath] = apiItem.PackageRelAlias
+			importsMap[apiItem.ApiFile.PackageExportedPath] = apiItem.ApiFile.PackageRelAlias
 		}
 
 		// handle func binding
 		strHandleFunc := apiItem.ApiHandlerFunc
-		if apiItem.PackageRelAlias != "" {
-			strHandleFunc = fmt.Sprintf("%s.%s", apiItem.PackageRelAlias, apiItem.ApiHandlerFunc)
+		if apiItem.ApiFile.PackageRelAlias != "" {
+			strHandleFunc = fmt.Sprintf("%s.%s", apiItem.ApiFile.PackageRelAlias, apiItem.ApiHandlerFunc)
 		}
 
 		handleFuncName := ""

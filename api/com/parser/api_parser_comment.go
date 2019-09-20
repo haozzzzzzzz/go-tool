@@ -27,11 +27,6 @@ const LineTagKeyDocRelativePaths = "api_doc_relative_paths"
 const LineTagKeyDocTags = "api_doc_tags"
 
 func ParseApisFromPkgCommentText(
-	fileName string,
-	fileDir string,
-	pkgName string,
-	pkgExportedPath string,
-	pkgRelAlias string,
 	commentText string,
 ) (
 	commonParams []*ApiItemParams,
@@ -39,11 +34,6 @@ func ParseApisFromPkgCommentText(
 	err error,
 ) {
 	commonApis, err := parseApisFromCommentText(
-		fileName,
-		fileDir,
-		pkgName,
-		pkgExportedPath,
-		pkgRelAlias,
 		commentText,
 		"@"+BlockTagKeyCommonStart,
 		"@"+BlockTagKeyCommonEnd,
@@ -59,11 +49,6 @@ func ParseApisFromPkgCommentText(
 	}
 
 	apis, err = parseApisFromCommentText(
-		fileName,
-		fileDir,
-		pkgName,
-		pkgExportedPath,
-		pkgRelAlias,
 		commentText,
 		"@"+BlockTagKeyStart,
 		"@"+BlockTagKeyEnd,
@@ -84,11 +69,6 @@ func ParseApisFromPkgCommentText(
 }
 
 func parseApisFromCommentText(
-	fileName string,
-	fileDir string,
-	pkgName string,
-	pkgExportedPath string,
-	pkgRelAlias string,
 	commentText string,
 	startTag string,
 	endTag string,
@@ -118,12 +98,6 @@ func parseApisFromCommentText(
 		if tempApiItem == nil {
 			continue
 		}
-
-		tempApiItem.SourceFile = fileName
-		tempApiItem.PackageName = pkgName
-		tempApiItem.PackageExportedPath = pkgExportedPath
-		tempApiItem.PackageRelAlias = pkgRelAlias
-		tempApiItem.PackageDir = fileDir
 
 		apis = append(apis, tempApiItem)
 	}
@@ -338,7 +312,7 @@ func commentApiRequestDataIType(
 	return
 }
 
-type ApiCommentTags struct {
+type CommentTags struct {
 	Summary     string // 非tag的注释第一行是summary，其余是description
 	Description string
 	Deprecated  bool
@@ -350,39 +324,14 @@ type ApiCommentTags struct {
 	LineTagDocTags          []string
 }
 
-func (m *ApiCommentTags) FillApiItem(apiItem *ApiItem) {
-	if apiItem.Summary == "" {
-		apiItem.Summary = m.Summary
-	}
-
-	if apiItem.Description == "" {
-		apiItem.Description = m.Description
-	}
-
-	if apiItem.HttpMethod == "" {
-		apiItem.HttpMethod = m.LineTagDocHttpMethod
-	}
-
-	if len(apiItem.RelativePaths) == 0 {
-		apiItem.RelativePaths = m.LineTagDocRelativePaths
-	}
-
-	if len(apiItem.Tags) == 0 {
-		apiItem.Tags = m.LineTagDocTags
-	}
-
-	apiItem.Deprecated = m.Deprecated
-	return
-}
-
-func NewApiCommentTags() *ApiCommentTags {
-	return &ApiCommentTags{
+func NewCommentTags() *CommentTags {
+	return &CommentTags{
 		LineTagDocRelativePaths: make([]string, 0),
 	}
 }
 
-func ParseApiCommentTags(text string) (tags *ApiCommentTags, err error) {
-	tags = NewApiCommentTags()
+func ParseCommentTags(text string) (tags *CommentTags, err error) {
+	tags = NewCommentTags()
 
 	// 去掉头部多余的*
 	text = strings.TrimSpace(text)

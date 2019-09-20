@@ -25,7 +25,7 @@ func CreateApiSource(apiItem *ApiItem) (err error) {
 		return
 	}
 
-	err = ioutil.WriteFile(apiItem.SourceFile, buf.Bytes(), os.ModePerm)
+	err = ioutil.WriteFile(apiItem.ApiFile.SourceFile, buf.Bytes(), os.ModePerm)
 	if nil != err {
 		logrus.Errorf("write api file failed. %s", err)
 		return

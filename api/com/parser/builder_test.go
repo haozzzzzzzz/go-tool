@@ -7,8 +7,8 @@ import (
 func TestCreateApiSource(t *testing.T) {
 	err := CreateApiSource(&ApiItem{
 		ApiHandlerFunc: "Func",
-		PackageName:    "api",
-		HttpMethod:     "GET",
+		//PackageName:    "api",
+		HttpMethod: "GET",
 		RelativePaths: []string{
 			"Hello",
 			"world",

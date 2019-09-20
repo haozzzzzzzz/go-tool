@@ -36,8 +36,8 @@ func TestSaveApisSwaggerSpec(t *testing.T) {
 					},
 				},
 			},
-			Summary:        "书本信息接口",
-			PackageName:    "pack",
+			Summary: "书本信息接口",
+			//PackageName:    "pack",
 			ApiHandlerFunc: "func",
 			HttpMethod:     "GET",
 			RelativePaths: []string{

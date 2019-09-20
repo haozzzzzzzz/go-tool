@@ -7,11 +7,6 @@ import (
 
 func TestParseApisFromPkgCommentText(t *testing.T) {
 	commonParams, apis, err := ParseApisFromPkgCommentText(
-		"",
-		"",
-		"",
-		"",
-		"",
 		`
 /**
 @api_doc_common_start
@@ -103,7 +98,7 @@ func TestParseCommentLineTags(t *testing.T) {
 		adfkajdla  asdfasdf
 		safsdfajlskf
 	`
-	tags, err := ParseApiCommentTags(text)
+	tags, err := ParseCommentTags(text)
 	if nil != err {
 		t.Error(err)
 		return

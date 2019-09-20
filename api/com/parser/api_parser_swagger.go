@@ -73,7 +73,7 @@ func (m *SwaggerSpec) MergeFromCommonParams(apiItem *ApiItem) (err error) {
 		return
 	}
 
-	pkgDir := apiItem.PackageDir
+	pkgDir := apiItem.ApiFile.PackageDir
 	matchedCommonParams := make([]*ApiItemParams, 0)
 	for dir, commonParams := range m.commonParamsMap {
 		if strings.Contains(pkgDir, dir) {
