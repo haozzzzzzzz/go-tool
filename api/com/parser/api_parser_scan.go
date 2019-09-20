@@ -33,7 +33,7 @@ func (m *ApiParser) ScanApis(
 	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
 	usePackagesParse bool, // use Packages or Parser, gomod使用package，gopath使用parser
 ) (
-	commonApiParams *ApiItemParams,
+	commonApiParamsMap map[string]*ApiItemParams, // dir -> common params
 	apis []*ApiItem,
 	err error,
 ) {
@@ -46,7 +46,7 @@ func (m *ApiParser) ScanApis(
 		return
 	}
 
-	commonParamsSlice, codeApis, err := ParseApis(apiDir, parseRequestData, parseCommentText, usePackagesParse)
+	commonApiParamsMap, codeApis, err := ParseApis(apiDir, parseRequestData, parseCommentText, usePackagesParse)
 	if nil != err {
 		logrus.Errorf("parse apis from code failed. error: %s.", err)
 		return
@@ -76,22 +76,6 @@ func (m *ApiParser) ScanApis(
 		sortedApis = append(sortedApis, mapApi[key])
 	}
 	apis = sortedApis
-
-	// merge common params
-	lenCommonParams := len(commonParamsSlice)
-	if lenCommonParams > 1 {
-		logrus.Warnf("found multi common params, merging them")
-		commonApiParams, err = MergeApiItemParams(commonParamsSlice...)
-		if nil != err {
-			logrus.Errorf("merge apis item params failed. error: %s.", err)
-			return
-		}
-
-	} else if lenCommonParams == 1 {
-		commonApiParams = commonParamsSlice[0]
-
-	}
-
 	return
 }
 
@@ -101,10 +85,11 @@ func ParseApis(
 	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
 	userPackageParse bool, // parseRequestData=true时，生效
 ) (
-	commonParams []*ApiItemParams,
+	commonParamsMap map[string]*ApiItemParams, // file dir -> api item params
 	apis []*ApiItem,
 	err error,
 ) {
+	commonParamsMap = make(map[string]*ApiItemParams)
 	apis = make([]*ApiItem, 0)
 	logrus.Info("Scan api files ...")
 	defer func() {
@@ -127,7 +112,8 @@ func ParseApis(
 
 	// 服务源文件，只能一个pkg一个pkg地解析
 	for _, subApiDir := range subApiDir {
-		subCommonParams, subApis, errParse := ParsePkgApis(apiDir, subApiDir, userPackageParse, parseRequestData, parseCommentText)
+
+		subCommonParamses, subApis, errParse := ParsePkgApis(apiDir, subApiDir, userPackageParse, parseRequestData, parseCommentText)
 		err = errParse
 		if nil != err {
 			logrus.Errorf("parse api file dir %q failed. error: %s.", subApiDir, err)
@@ -135,7 +121,18 @@ func ParseApis(
 		}
 
 		apis = append(apis, subApis...)
-		commonParams = append(commonParams, subCommonParams...)
+
+		for _, subCommonParams := range subCommonParamses {
+			_, ok := commonParamsMap[subApiDir]
+			if !ok {
+				commonParamsMap[subApiDir] = subCommonParams
+			} else {
+				err = commonParamsMap[subApiDir].MergeApiItemParams(subCommonParams)
+				if nil != err {
+					logrus.Errorf("merge api item common params failed. %#v", subCommonParams)
+				}
+			}
+		}
 	}
 
 	return
@@ -375,34 +372,6 @@ func ParsePkgApis(
 			}
 		}
 	}
-
-	//// map api item def ident ast obj to types.Named
-	//mapApiObjTypes := make(map[*ast.Ident]*types.Named)
-	//for ident, def := range typesInfo.Defs {
-	//	typesVar, ok := def.(*types.Var)
-	//	if !ok {
-	//		continue
-	//	}
-	//
-	//	typesNamed, ok := typesVar.Type().(*types.Named)
-	//	if !ok {
-	//		continue
-	//	}
-	//
-	//	typeName := typesNamed.Obj()
-	//	typePkg := typeName.Pkg()
-	//	if typePkg == nil || typePkg.Name() != "ginbuilder" || typeName.Name() != "HandleFunc" {
-	//		continue
-	//	}
-	//
-	//	_, ok = mapApiObjTypes[ident]
-	//	if ok {
-	//		continue
-	//	}
-	//
-	//	// ginbuilder.HandlerFunc obj
-	//	mapApiObjTypes[ident] = typesNamed
-	//}
 
 	for _, astFile := range astFiles { // 遍历当前package的语法树
 		fileName := astFileNames[astFile]

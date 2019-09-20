@@ -306,9 +306,11 @@ type ApiItem struct {
 	HttpMethod    string   `validate:"required" json:"http_method" yaml:"http_method"`
 	RelativePaths []string `validate:"required" json:"relative_paths" yaml:"relative_paths"`
 
+	// swagger
 	Summary     string   `json:"summary" yaml:"summary"`
 	Description string   `json:"description" yaml:"description"`
-	Tags        []string `json:"tags" yaml:"tags"` // 标签
+	Tags        []string `json:"tags" yaml:"tags"`             // 标签
+	Deprecated  bool     `json:"deprecated" yaml:"deprecated"` // 是否是弃用的
 }
 
 func (m *ApiItem) PackageFuncName() string {

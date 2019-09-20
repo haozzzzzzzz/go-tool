@@ -21,9 +21,9 @@ import (
 )
 
 type SwaggerSpec struct {
-	commonParams *ApiItemParams
-	apis         []*ApiItem
-	Swagger      *lswagger.Swagger
+	commonParamsMap map[string]*ApiItemParams // dir -> common params
+	apis            []*ApiItem
+	Swagger         *lswagger.Swagger
 }
 
 func NewSwaggerSpec() (swgSpec *SwaggerSpec) {
@@ -51,14 +51,10 @@ func (m *SwaggerSpec) ParseApis() (
 	for _, api := range m.apis {
 		paths := api.RelativePaths
 		for _, path := range paths { // if api has handler with multi paths, gen spec for each path
-
-			if m.commonParams != nil {
-				// merge common field
-				err = api.ApiItemParams.MergeApiItemParams(m.commonParams)
-				if nil != err {
-					logrus.Errorf("merge common fields failed. error: %s.", err)
-					return
-				}
+			err = m.MergeFromCommonParams(api)
+			if nil != err {
+				logrus.Errorf("merge from common params failed. error: %s.", err)
+				return
 			}
 
 			err = m.parseApi(path, api)
@@ -66,6 +62,34 @@ func (m *SwaggerSpec) ParseApis() (
 				logrus.Errorf("swagger spec parse api failed. error: %s.", err)
 				return
 			}
+		}
+	}
+
+	return
+}
+
+func (m *SwaggerSpec) MergeFromCommonParams(apiItem *ApiItem) (err error) {
+	if m.commonParamsMap == nil || apiItem == nil {
+		return
+	}
+
+	pkgDir := apiItem.PackageDir
+	matchedCommonParams := make([]*ApiItemParams, 0)
+	for dir, commonParams := range m.commonParamsMap {
+		if strings.Contains(pkgDir, dir) {
+			matchedCommonParams = append(matchedCommonParams, commonParams)
+		}
+	}
+
+	if len(matchedCommonParams) == 0 {
+		return
+	}
+
+	for _, commonParams := range matchedCommonParams {
+		err = apiItem.ApiItemParams.MergeApiItemParams(commonParams)
+		if nil != err {
+			logrus.Errorf("api merge common params failed. %s", err)
+			return
 		}
 	}
 
@@ -93,6 +117,7 @@ func (m *SwaggerSpec) parseApi(path string, api *ApiItem) (err error) {
 	operation.Description = api.Description
 	operation.Parameters = make([]spec.Parameter, 0)
 	operation.Tags = api.Tags
+	operation.Deprecated = api.Deprecated
 
 	// uri data
 	if api.UriData != nil {
@@ -209,8 +234,8 @@ func (m *SwaggerSpec) parseApi(path string, api *ApiItem) (err error) {
 }
 
 // set apis for building swagger spec
-func (m *SwaggerSpec) Apis(commonParams *ApiItemParams, apis []*ApiItem) {
-	m.commonParams = commonParams
+func (m *SwaggerSpec) Apis(commonParamsMap map[string]*ApiItemParams, apis []*ApiItem) {
+	m.commonParamsMap = commonParamsMap
 	m.apis = apis
 }
 

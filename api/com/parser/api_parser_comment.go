@@ -341,6 +341,7 @@ func commentApiRequestDataIType(
 type ApiCommentTags struct {
 	Summary     string // 非tag的注释第一行是summary，其余是description
 	Description string
+	Deprecated  bool
 
 	LineTagDocRoute string
 
@@ -370,6 +371,7 @@ func (m *ApiCommentTags) FillApiItem(apiItem *ApiItem) {
 		apiItem.Tags = m.LineTagDocTags
 	}
 
+	apiItem.Deprecated = m.Deprecated
 	return
 }
 
@@ -497,6 +499,10 @@ func ParseApiCommentTags(text string) (tags *ApiCommentTags, err error) {
 		tags.Summary = strings.TrimSpace(tags.Summary)
 		tags.Description = strings.TrimSpace(tags.Description)
 
+		strBuf = bufio.NewReader(strings.NewReader(noTagsText))
+		if strings.Contains(noTagsText, "Deprecated") {
+			tags.Deprecated = true
+		}
 	}
 
 	return
