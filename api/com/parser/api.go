@@ -95,14 +95,14 @@ func (m *StructType) AddFields(fields ...*Field) (err error) {
 			return
 		}
 
-		_, ok := m.mField[field.TagJsonOrName()]
+		fieldName := field.TagJsonOrName()
+		_, ok := m.mField[fieldName]
 		if ok {
-			err = uerrors.Newf("has conflict field name")
-			return
+			continue // skip same
 		}
 
 		m.Fields = append(m.Fields, field)
-
+		m.mField[fieldName] = field
 	}
 
 	return

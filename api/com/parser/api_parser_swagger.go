@@ -51,17 +51,18 @@ func (m *SwaggerSpec) ParseApis() (
 	for _, api := range m.apis {
 		paths := api.RelativePaths
 		for _, path := range paths { // if api has handler with multi paths, gen spec for each path
+			err = m.parseApi(path, api)
+			if nil != err {
+				logrus.Errorf("swagger spec parse api failed. error: %s.", err)
+				return
+			}
+
 			err = m.MergeFromCommonParams(api)
 			if nil != err {
 				logrus.Errorf("merge from common params failed. error: %s.", err)
 				return
 			}
 
-			err = m.parseApi(path, api)
-			if nil != err {
-				logrus.Errorf("swagger spec parse api failed. error: %s.", err)
-				return
-			}
 		}
 	}
 

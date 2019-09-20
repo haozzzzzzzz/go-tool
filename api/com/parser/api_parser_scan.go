@@ -374,6 +374,7 @@ func ParsePkgApis(
 	}
 
 	for _, astFile := range astFiles { // 遍历当前package的语法树
+		fileApis := make([]*ApiItem, 0)
 		fileName := astFileNames[astFile]
 
 		// skip *_test.go and routers.go
@@ -482,7 +483,7 @@ func ParsePkgApis(
 					return
 				}
 
-				apis = append(apis, apiItem)
+				fileApis = append(fileApis, apiItem)
 
 			case *ast.FuncDecl: // type HandlerFunc func(*Context)
 				funcDecl := decl.(*ast.FuncDecl)
@@ -517,7 +518,7 @@ func ParsePkgApis(
 					return
 				}
 
-				apis = append(apis, apiItem)
+				fileApis = append(fileApis, apiItem)
 
 			default:
 				continue
@@ -556,7 +557,7 @@ func ParsePkgApis(
 						return
 					}
 
-					apis = append(apis, commentApis...)
+					fileApis = append(fileApis, commentApis...)
 
 					commonParams = append(commonParams, subCommonParams...)
 				}
@@ -564,9 +565,10 @@ func ParsePkgApis(
 
 		}
 
-		for _, api := range apis {
+		for _, api := range fileApis {
 			api.ApiFile = apiFile
 			api.MergeInfoFromApiInfo()
+			apis = append(apis, api)
 		}
 
 	}
@@ -578,7 +580,6 @@ func ParseGinbuilderHandleFuncApi(
 	apiItem *ApiItem,
 	genDel *ast.GenDecl,
 	valueSpec *ast.ValueSpec,
-	//mapApiObjTypes map[*ast.Ident]*types.Named,
 	obj *ast.Ident, // variables with name
 	typesInfo *types.Info,
 	parseRequestData bool,
@@ -601,12 +602,6 @@ func ParseGinbuilderHandleFuncApi(
 		}
 
 	}
-
-	//apiType, ok := mapApiObjTypes[obj]
-	//if !ok { // 判断是否有声明
-	//	logrus.Warnf("failed to find types of api ast ident. %s", obj)
-	//}
-	//_ = apiType
 
 	for _, value := range valueSpec.Values { // 遍历属性
 		compositeLit, ok := value.(*ast.CompositeLit)
