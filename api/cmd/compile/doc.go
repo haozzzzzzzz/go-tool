@@ -49,7 +49,7 @@ func GenerateSwaggerSpecification() *cobra.Command {
 				return
 			}
 
-			commonParams, apis, err := apiParser.ScanApis(true, true, !notMod)
+			_, apis, err := apiParser.ScanApis(true, true, !notMod)
 			if nil != err {
 				logrus.Errorf("Scan api failed. err: %s.", err)
 				return
@@ -63,7 +63,7 @@ func GenerateSwaggerSpecification() *cobra.Command {
 				contactName,
 			)
 			swaggerSpec.Host(host)
-			swaggerSpec.Apis(commonParams, apis)
+			swaggerSpec.Apis(apis)
 			swaggerSpec.Schemes([]string{"http", "https"})
 			err = swaggerSpec.ParseApis()
 			err = swaggerSpec.SaveToFile(fmt.Sprintf("%s/swagger.json", outputDir))
