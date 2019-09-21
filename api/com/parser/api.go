@@ -25,11 +25,18 @@ func (m *Field) TagJsonOrName() (name string) {
 }
 
 func (m *Field) TagJson() (name string) {
-	return m.Tags["json"]
-}
+	strJson := m.Tags["json"]
+	if strJson == "" {
+		return
+	}
 
-func (m *Field) TagForm() (name string) {
-	return m.Tags["json"]
+	jsonParts := strings.Split(strJson, ",")
+	if len(jsonParts) == 0 {
+		return
+	}
+
+	name = strings.TrimSpace(jsonParts[0])
+	return
 }
 
 func (m *Field) Required() (required bool) {
