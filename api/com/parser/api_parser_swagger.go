@@ -113,10 +113,11 @@ func (m *SwaggerSpec) parseApi(path string, api *ApiItem) (err error) {
 	if api.PostData != nil {
 		body := &spec.Parameter{}
 		body.In = "body"
-		body.Name = api.PostData.Name
-		body.Description = api.PostData.Description
+		body.Name = api.PostData.TypeName()
+		body.Description = api.PostData.TypeDescription()
 		body.Required = true
 		body.Schema = ITypeToSwaggerSchema(api.PostData)
+
 		operation.Parameters = append(operation.Parameters, *body)
 	}
 

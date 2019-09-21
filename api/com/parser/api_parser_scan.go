@@ -834,12 +834,7 @@ func parseApiFuncBody(
 						continue
 					}
 
-					structType, ok := iType.(*StructType)
-					if ok {
-						apiItem.PostData = structType
-					} else {
-						logrus.Warnf("post data is not struct type")
-					}
+					apiItem.PostData = iType
 
 				case "respData":
 					iType := parseType(typesInfo, typeVar.Type())
@@ -980,10 +975,22 @@ func parseType(
 
 	case *types.Slice:
 		arrType := NewArrayType()
-		eltType := parseType(info, t.(*types.Slice).Elem())
+		typeSlice := t.(*types.Slice)
+		eltType := parseType(info, typeSlice.Elem())
 		arrType.EltSpec = eltType
 		arrType.EltName = eltType.TypeName()
 		arrType.Name = fmt.Sprintf("[]%s", eltType.TypeName())
+
+		iType = arrType
+
+	case *types.Array:
+		arrType := NewArrayType()
+		typeArr := t.(*types.Array)
+		eltType := parseType(info, typeArr.Elem())
+		arrType.Len = typeArr.Len()
+		arrType.EltSpec = eltType
+		arrType.EltName = eltType.TypeName()
+		arrType.Name = fmt.Sprintf("[%d]%s", arrType.Len, eltType.TypeName())
 
 		iType = arrType
 

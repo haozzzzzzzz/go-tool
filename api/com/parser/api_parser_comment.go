@@ -181,10 +181,13 @@ func parseCommentTextToApi(
 		return
 	}
 
-	api.PostData, err = commentApiRequestDataToStructType(comApi.PostData)
+	postData, err := commentApiRequestDataToStructType(comApi.PostData)
 	if nil != err {
 		logrus.Errorf("comment text api post data to struct type failed. error: %s.", err)
 		return
+	}
+	if postData != nil {
+		api.PostData = postData
 	}
 
 	respData, err := commentApiRequestDataToStructType(comApi.RespData)

@@ -49,6 +49,7 @@ func NewField() *Field {
 // type interface
 type IType interface {
 	TypeName() string
+	TypeDescription() string
 }
 
 // 类型分类
@@ -60,12 +61,17 @@ const TypeClassInterfaceType = "interface"
 
 // 标准类型
 type BasicType struct {
-	TypeClass string `json:"type_class" yaml:"type_class"`
-	Name      string `json:"name" yaml:"name"`
+	TypeClass   string `json:"type_class" yaml:"type_class"`
+	Name        string `json:"name" yaml:"name"`
+	Description string `json:"description" yaml:"description"`
 }
 
 func (m BasicType) TypeName() string {
-	return string(m.Name)
+	return m.Name
+}
+
+func (m BasicType) TypeDescription() string {
+	return m.Description
 }
 
 func NewBasicType(name string) *BasicType {
@@ -86,6 +92,10 @@ type StructType struct {
 
 func (m *StructType) TypeName() string {
 	return m.Name
+}
+
+func (m *StructType) TypeDescription() string {
+	return m.Description
 }
 
 func (m *StructType) AddFields(fields ...*Field) (err error) {
@@ -119,14 +129,19 @@ func NewStructType() *StructType {
 
 // map
 type MapType struct {
-	TypeClass string `json:"type_class" yaml:"type_class"`
-	Name      string `json:"name" yaml:"name"`
-	KeySpec   IType  `json:"key" yaml:"key"`
-	ValueSpec IType  `json:"value_spec" yaml:"value_spec"`
+	TypeClass   string `json:"type_class" yaml:"type_class"`
+	Name        string `json:"name" yaml:"name"`
+	Description string `json:"description" yaml:"description"`
+	KeySpec     IType  `json:"key" yaml:"key"`
+	ValueSpec   IType  `json:"value_spec" yaml:"value_spec"`
 }
 
 func (m *MapType) TypeName() string {
 	return m.Name
+}
+
+func (m *MapType) TypeDescription() string {
+	return m.Description
 }
 
 func NewMapType() *MapType {
@@ -138,14 +153,20 @@ func NewMapType() *MapType {
 
 // array
 type ArrayType struct {
-	TypeClass string `json:"type_class" yaml:"type_class"`
-	Name      string `json:"name" yaml:"name"`
-	EltName   string `json:"elt_name" yaml:"elt_name"`
-	EltSpec   IType  `json:"elt_spec" yaml:"elt_spec"`
+	TypeClass   string `json:"type_class" yaml:"type_class"`
+	Name        string `json:"name" yaml:"name"`
+	Description string `json:"description" yaml:"description"`
+	Len         int64  `json:"len" yaml:"len"`
+	EltName     string `json:"elt_name" yaml:"elt_name"`
+	EltSpec     IType  `json:"elt_spec" yaml:"elt_spec"`
 }
 
 func (m *ArrayType) TypeName() string {
 	return m.Name
+}
+
+func (m *ArrayType) TypeDescription() string {
+	return m.Description
 }
 
 func NewArrayType() *ArrayType {
@@ -170,11 +191,15 @@ func (m *InterfaceType) TypeName() string {
 	return m.TypeClass
 }
 
+func (m *InterfaceType) TypeDescription() string {
+	return m.TypeClass
+}
+
 type ApiItemParams struct {
 	HeaderData *StructType `json:"header_data" yaml:"header_data"`
 	UriData    *StructType `json:"uri_data" yaml:"uri_data"`
 	QueryData  *StructType `json:"query_data" yaml:"query_data"`
-	PostData   *StructType `json:"post_data" yaml:"post_data"`
+	PostData   IType       `json:"post_data" yaml:"post_data"`
 	RespData   IType       `json:"response_data" yaml:"response_data"`
 }
 
@@ -183,7 +208,7 @@ func NewApiItemParams() *ApiItemParams {
 		HeaderData: NewStructType(),
 		UriData:    NewStructType(),
 		QueryData:  NewStructType(),
-		PostData:   NewStructType(),
+		PostData:   NewStructType(), // default
 		RespData:   NewStructType(), // default
 	}
 }
@@ -230,15 +255,30 @@ func (m *ApiItemParams) MergeApiItemParams(items ...*ApiItemParams) (err error) 
 			}
 		}
 
-		if item.PostData != nil && len(item.PostData.Fields) > 0 {
+		if item.PostData != nil {
 			if m.PostData == nil {
 				m.PostData = NewStructType()
 			}
 
-			err = m.PostData.AddFields(item.PostData.Fields...)
-			if nil != err {
-				logrus.Errorf("add post data fields failed. error: %s.", err)
-				return
+			switch item.PostData.(type) {
+			case *StructType:
+				itemPostStruct := item.RespData.(*StructType)
+				if len(itemPostStruct.Fields) == 0 {
+					break
+				}
+
+				mPostStruct, ok := m.PostData.(*StructType)
+				if !ok {
+					logrus.Warnf("can not merge post data, because of different type. %s %s", reflect.TypeOf(item.PostData), reflect.TypeOf(m.PostData))
+					break
+				}
+
+				err = mPostStruct.AddFields(itemPostStruct.Fields...)
+				if nil != err {
+					logrus.Errorf("add post data fields failed. error: %s.", err)
+					return
+				}
+
 			}
 		}
 
