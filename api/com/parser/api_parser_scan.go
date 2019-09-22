@@ -954,6 +954,21 @@ func parseType(
 
 			}
 
+			if tField.Anonymous() {
+				fieldType := parseType(info, tField.Type())
+				fieldStruct, ok := fieldType.(*StructType)
+				if !ok {
+					logrus.Warnf("anonymous field:%s must be struct", tField)
+					continue
+				}
+				//匿名成员取出来平铺
+				if err := structType.AddFields(fieldStruct.Fields...); err != nil {
+					logrus.Warnf("parse struct type add fields failed. error: %s.", err)
+					return
+				}
+				continue
+			}
+
 			// tags
 			field.Tags = parseStringTagParts(tStructType.Tag(i))
 
