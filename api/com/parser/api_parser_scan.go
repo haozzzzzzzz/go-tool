@@ -296,7 +296,7 @@ func ParsePkgApis(
 
 			// imported
 			impPaths := make(map[string]bool)
-			for fileName, pkgFile := range astFileMap {
+			for fileName, pkgFile := range astFileMap { // only parse first level of imported
 				_ = fileName
 				for _, fileImport := range pkgFile.Imports {
 					impPath := strings.Replace(fileImport.Path.Value, "\"", "", -1)
@@ -309,6 +309,7 @@ func ParsePkgApis(
 				}
 			}
 
+			// parse ast files and types
 			for impPath, _ := range impPaths {
 				tempFileSet := token.NewFileSet()
 				tempAstFiles := make([]*ast.File, 0)
@@ -455,7 +456,7 @@ func ParsePkgApis(
 		apiFile.PackageDir = fileName
 
 		// search package api types
-		for _, decl := range astFile.Decls /*objName, obj := range astFile.Scope.Objects*/ { // 遍历顶层所有变量，寻找HandleFunc
+		for _, decl := range astFile.Decls { // 遍历顶层所有变量，寻找HandleFunc
 			apiItem := &ApiItem{
 				RelativePaths: make([]string, 0),
 			}
@@ -957,7 +958,7 @@ func parseType(
 			// tags
 			field.Tags = parseStringTagParts(tStructType.Tag(i))
 
-			// definition
+			// field definition
 			field.Name = tField.Name()
 			fieldType := parseType(info, tField.Type())
 			field.TypeName = fieldType.TypeName()
@@ -970,6 +971,7 @@ func parseType(
 				return
 			}
 
+			// embedded
 			if field.Embedded {
 				structType.AddEmbedded(field)
 			}
@@ -995,7 +997,11 @@ func parseType(
 		arrType.Len = typeArr.Len()
 		arrType.EltSpec = eltType
 		arrType.EltName = eltType.TypeName()
-		arrType.Name = fmt.Sprintf("[%d]%s", arrType.Len, eltType.TypeName())
+		if arrType.Len > 0 {
+			arrType.Name = fmt.Sprintf("[%d]%s", arrType.Len, eltType.TypeName())
+		} else {
+			arrType.Name = fmt.Sprintf("[]%s", eltType.TypeName())
+		}
 
 		iType = arrType
 

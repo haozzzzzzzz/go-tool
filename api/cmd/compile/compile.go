@@ -31,7 +31,7 @@ func CommandApiCompile() *cobra.Command {
 
 			serviceDir, err = filepath.Abs(serviceDir)
 			if nil != err {
-				logrus.Errorf("get absolute service path failed. \ns%s.", err)
+				logrus.Errorf("get absolute service path failed. %s.", err)
 				return
 			}
 
