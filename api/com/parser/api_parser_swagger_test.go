@@ -101,3 +101,21 @@ func TestSaveApisSwaggerSpec2(t *testing.T) {
 
 	fmt.Println(string(out))
 }
+
+type B struct {
+	I int `json:"i"`
+}
+type A struct {
+	B
+}
+
+func TestType(t *testing.T) {
+	a := A{}
+	ba, err := json.Marshal(a)
+	if nil != err {
+		t.Error(err)
+		return
+	}
+
+	fmt.Println(string(ba))
+}

@@ -321,14 +321,43 @@ func ITypeToSwaggerSchema(iType IType) (schema *spec.Schema) {
 		schema.Properties = make(map[string]spec.Schema)
 
 		for _, field := range structType.Fields {
-			jsonName := field.TagJson()
-			fieldSchema := ITypeToSwaggerSchema(field.TypeSpec)
-			fieldSchema.Description = field.Description
-			if field.Required() {
-				fieldSchema.Required = []string{jsonName}
+			if !field.Embedded { // 非嵌入的field
+				jsonName := field.TagJson()
+				fieldSchema := ITypeToSwaggerSchema(field.TypeSpec)
+				fieldSchema.Description = field.Description
+				if field.Required() {
+					fieldSchema.Required = []string{jsonName}
+				}
+
+				schema.Properties[jsonName] = *fieldSchema
+			}
+		}
+
+		for _, embeddedField := range structType.Embedded {
+			_, ok := embeddedField.TypeSpec.(*StructType)
+			if !ok {
+				continue
 			}
 
-			schema.Properties[jsonName] = *fieldSchema
+			embeddedSchema := ITypeToSwaggerSchema(embeddedField.TypeSpec)
+			if embeddedSchema == nil {
+				logrus.Errorf("parse embedded struct type to swagger schema failed. embedded type: %s", embeddedField.TypeName)
+				continue
+			}
+
+			// required
+			schema.AddRequired(embeddedSchema.Required...)
+
+			// merge field
+			for fieldName, fieldSchema := range embeddedSchema.Properties {
+				_, ok := schema.Properties[fieldName]
+				if ok {
+					logrus.Warnf("conflict embedded struct field name. fieldName: %s, embedded struct: %s", fieldName, embeddedField.TypeName)
+					continue
+				}
+
+				schema.Properties[fieldName] = fieldSchema
+			}
 		}
 
 	case *MapType:
@@ -354,7 +383,7 @@ func ITypeToSwaggerSchema(iType IType) (schema *spec.Schema) {
 		schema.Type = []string{schemaType}
 
 	default:
-		fmt.Println("unsported itype for swagger schema")
+		fmt.Println("unsupported itype for swagger schema")
 	}
 
 	return
