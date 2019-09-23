@@ -7,7 +7,7 @@ import (
 
 func TestSaveApisSwaggerSpec(t *testing.T) {
 	swgSpc := NewSwaggerSpec()
-	swgSpc.Apis(nil, []*ApiItem{
+	swgSpc.Apis([]*ApiItem{
 		{
 			ApiItemParams: ApiItemParams{
 				HeaderData: &StructType{
