@@ -9,11 +9,19 @@ import (
 )
 
 type Field struct {
-	Name        string            `json:"name" yaml:"name"`
-	TypeName    string            `json:"type_name" yaml:"type_name"`
-	Tags        map[string]string `json:"tags" yaml:"tags"`
-	TypeSpec    IType             `json:"type_spec" form:"type_spec"`
-	Description string            `json:"description" form:"description"`
+	Name     string            `json:"name" yaml:"name"`
+	TypeName string            `json:"type_name" yaml:"type_name"`
+	Tags     map[string]string `json:"tags" yaml:"tags"`
+	TypeSpec IType             `json:"type_spec" yaml:"type_spec"`
+
+	/*
+		是否是嵌入的属性。
+		type A struct {
+			B // B是A的embedded field
+		}
+	*/
+	Embedded    bool   `json:"embedded" yaml:"embedded"`
+	Description string `json:"description" yaml:"description"`
 }
 
 func (m *Field) TagJsonOrName() (name string) {
@@ -92,6 +100,7 @@ func NewBasicType(name string) *BasicType {
 type StructType struct {
 	TypeClass   string            `json:"type_class" yaml:"type_class"`
 	Name        string            `json:"name" yaml:"name"`
+	Embedded    []*Field          `json:"embedded" yaml:"embedded"`
 	Fields      []*Field          `json:"fields" yaml:"fields"`
 	mField      map[string]*Field `json:"-" yaml:"-"`
 	Description string            `json:"description" yaml:"description"`
@@ -122,6 +131,11 @@ func (m *StructType) AddFields(fields ...*Field) (err error) {
 		m.mField[fieldName] = field
 	}
 
+	return
+}
+
+func (m *StructType) AddEmbedded(fields ...*Field) {
+	m.Embedded = append(m.Embedded, fields...)
 	return
 }
 
