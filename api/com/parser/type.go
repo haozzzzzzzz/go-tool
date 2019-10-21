@@ -137,6 +137,10 @@ func (m *StructType) AddEmbedded(fields ...*Field) {
 	return
 }
 
+func (m *StructType) IsEmpty() bool {
+	return len(m.Fields) == 0
+}
+
 func NewStructType() *StructType {
 	return &StructType{
 		TypeClass: TypeClassStructType,

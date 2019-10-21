@@ -67,15 +67,14 @@ func (m *ApiItemParams) MergeApiItemParams(items ...*ApiItemParams) (err error) 
 		}
 
 		if item.PostData != nil {
-			if m.PostData == nil {
-				m.PostData = NewStructType()
-			}
-
-			switch item.PostData.(type) {
+			switch itemPostData := item.PostData.(type) {
 			case *StructType:
-				itemPostStruct := item.RespData.(*StructType)
-				if len(itemPostStruct.Fields) == 0 {
+				if itemPostData.IsEmpty() {
 					break
+				}
+
+				if m.PostData == nil {
+					m.PostData = NewStructType()
 				}
 
 				mPostStruct, ok := m.PostData.(*StructType)
@@ -84,7 +83,7 @@ func (m *ApiItemParams) MergeApiItemParams(items ...*ApiItemParams) (err error) 
 					break
 				}
 
-				err = mPostStruct.AddFields(itemPostStruct.Fields...)
+				err = mPostStruct.AddFields(itemPostData.Fields...)
 				if nil != err {
 					logrus.Errorf("add post data fields failed. error: %s.", err)
 					return
