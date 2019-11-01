@@ -77,6 +77,7 @@ func (m *ApiParser) ScanApis(
 
 	// sort api
 	sortedApiUriKeys := make([]string, 0)
+	uriKeyExistsMap := make(map[string]*ApiItem)
 	mapApi := make(map[string]*ApiItem)
 	for _, oneApi := range apis {
 		if oneApi.RelativePaths == nil || len(oneApi.RelativePaths) == 0 || oneApi.HttpMethod == "" { // required relative paths and http method
@@ -84,8 +85,21 @@ func (m *ApiParser) ScanApis(
 			continue
 		}
 
-		relPath := oneApi.RelativePaths[0] // use first relative paths to sort
-		uriKey := m.apiUrlKey(relPath, oneApi.HttpMethod)
+		// check url path if exists
+		for _, path := range oneApi.RelativePaths {
+			pathUriKey := m.apiUrlKey(path, oneApi.HttpMethod)
+			existUrlKeyItem, ok := uriKeyExistsMap[pathUriKey]
+			if ok {
+				err = uerrors.Newf("duplicated url handler. 1: %s, 2: %s", existUrlKeyItem.ApiHandlerFuncPath(), oneApi.ApiHandlerFuncPath())
+				return
+
+			} else {
+				uriKeyExistsMap[pathUriKey] = oneApi
+			}
+		}
+
+		firstRelPath := oneApi.RelativePaths[0] // use first relative paths to sort
+		uriKey := m.apiUrlKey(firstRelPath, oneApi.HttpMethod)
 		sortedApiUriKeys = append(sortedApiUriKeys, uriKey)
 		mapApi[uriKey] = oneApi
 	}

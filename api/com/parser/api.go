@@ -163,6 +163,10 @@ func (m *ApiItem) PackageFuncName() string {
 	return fmt.Sprintf("%s.%s", m.ApiFile.PackageRelAlias, m.ApiHandlerFunc)
 }
 
+func (m *ApiItem) ApiHandlerFuncPath() string {
+	return fmt.Sprintf("%s:%s", m.ApiFile.SourceFile, m.ApiHandlerFunc)
+}
+
 func (m *ApiItem) MergeInfoFromApiInfo() {
 	if m.ApiFile == nil {
 		return

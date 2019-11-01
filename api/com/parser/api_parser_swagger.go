@@ -46,24 +46,32 @@ func (m *SwaggerSpec) ParseApis() (
 		}
 	}()
 
+	pathApis := make(map[string][]*ApiItem)
 	// parse apis
 	for _, api := range m.apis {
 		paths := api.RelativePaths
-
 		for _, path := range paths { // if api has handler with multi paths, gen spec for each path
-			err = m.parseApi(path, api)
-			if nil != err {
-				logrus.Errorf("swagger spec parse api failed. error: %s.", err)
-				return
+			_, ok := pathApis[path]
+			if !ok {
+				pathApis[path] = make([]*ApiItem, 0)
 			}
 
+			pathApis[path] = append(pathApis[path], api)
+		}
+	}
+
+	for path, apis := range pathApis {
+		err = m.parsePathApis(path, apis)
+		if nil != err {
+			logrus.Errorf("parse path apis failed. error: %s.", err)
+			return
 		}
 	}
 
 	return
 }
 
-func (m *SwaggerSpec) parseApi(path string, api *ApiItem) (err error) {
+func (m *SwaggerSpec) parsePathApis(path string, apis []*ApiItem) (err error) {
 	// transform gin-style url path params "/:param" to swagger-style url param "{param}"
 	subPaths := strings.Split(path, "/")
 	for i, subPath := range subPaths {
@@ -75,125 +83,126 @@ func (m *SwaggerSpec) parseApi(path string, api *ApiItem) (err error) {
 	}
 
 	path = strings.Join(subPaths, "/")
-
-	operation := &spec.Operation{}
-	operation.ID = fmt.Sprintf("%s-%s", api.HttpMethod, path)
-	operation.Consumes = []string{request.MIME_JSON}
-	operation.Produces = []string{request.MIME_JSON}
-	operation.Summary = api.Summary
-	operation.Description = api.Description
-	operation.Parameters = make([]spec.Parameter, 0)
-	operation.Tags = api.Tags
-	operation.Deprecated = api.Deprecated
-
-	// uri data
-	if api.UriData != nil {
-		for _, pathField := range api.UriData.Fields {
-			basicParameter := *FieldBasicParameter("path", pathField)
-			basicParameter.Required = true // require uri data
-			operation.Parameters = append(operation.Parameters, basicParameter)
-		}
-	}
-
-	// header data
-	if api.HeaderData != nil {
-		for _, headerField := range api.HeaderData.Fields {
-			operation.Parameters = append(operation.Parameters, *FieldBasicParameter("header", headerField))
-		}
-	}
-
-	// query data
-	if api.QueryData != nil {
-		for _, queryField := range api.QueryData.Fields {
-			operation.Parameters = append(operation.Parameters, *FieldBasicParameter("query", queryField))
-		}
-	}
-
-	// post data
-	if api.PostData != nil {
-		body := &spec.Parameter{}
-		body.In = "body"
-		body.Name = api.PostData.TypeName()
-		body.Description = api.PostData.TypeDescription()
-		body.Required = true
-		body.Schema = ITypeToSwaggerSchema(api.PostData)
-
-		operation.Parameters = append(operation.Parameters, *body)
-	}
-
-	// response data
-	successResponse := spec.Response{}
-	successResponse.Description = "success"
-	if api.RespData != nil {
-
-		// wrap data for ginbuilder.HandleFunc
-		if api.ApiHandlerFuncType == ApiHandlerFuncTypeGinbuilderHandleFunc {
-			successResponse.Schema = ITypeToSwaggerSchema(SuccessResponseStructType(api.RespData))
-		} else {
-			successResponse.Schema = ITypeToSwaggerSchema(api.RespData)
-		}
-
-	}
-
-	operation.Responses = &spec.Responses{
-		ResponsesProps: spec.ResponsesProps{
-			StatusCodeResponses: map[int]spec.Response{
-				200: successResponse,
-			},
-		},
-	}
-
 	pathItem := &spec.PathItem{}
 
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#pathsObject
-	switch api.HttpMethod {
-	case request.METHOD_GET:
-		pathItem.Get = operation
-	case request.METHOD_POST:
-		pathItem.Post = operation
-	case request.METHOD_PUT:
-		pathItem.Put = operation
-	case request.METHOD_DELETE:
-		pathItem.Delete = operation
-	case request.METHOD_OPTIONS:
-		pathItem.Options = operation
-	case request.METHOD_HEAD:
-		pathItem.Head = operation
-	case request.METHOD_PATCH:
-		pathItem.Patch = operation
+	for _, api := range apis {
+		operation := &spec.Operation{}
+		operation.ID = fmt.Sprintf("%s-%s", api.HttpMethod, path)
+		operation.Consumes = []string{request.MIME_JSON}
+		operation.Produces = []string{request.MIME_JSON}
+		operation.Summary = api.Summary
+		operation.Description = api.Description
+		operation.Parameters = make([]spec.Parameter, 0)
+		operation.Tags = api.Tags
+		operation.Deprecated = api.Deprecated
 
-	case request.METHOD_ANY:
-		operationGet := *operation
-		operationGet.ID = fmt.Sprintf("%s-%s", request.METHOD_GET, path)
+		// uri data
+		if api.UriData != nil {
+			for _, pathField := range api.UriData.Fields {
+				basicParameter := *FieldBasicParameter("path", pathField)
+				basicParameter.Required = true // require uri data
+				operation.Parameters = append(operation.Parameters, basicParameter)
+			}
+		}
 
-		operationPost := *operation
-		operationPost.ID = fmt.Sprintf("%s-%s", request.METHOD_POST, path)
+		// header data
+		if api.HeaderData != nil {
+			for _, headerField := range api.HeaderData.Fields {
+				operation.Parameters = append(operation.Parameters, *FieldBasicParameter("header", headerField))
+			}
+		}
 
-		operationPut := *operation
-		operationPut.ID = fmt.Sprintf("%s-%s", request.METHOD_PUT, path)
+		// query data
+		if api.QueryData != nil {
+			for _, queryField := range api.QueryData.Fields {
+				operation.Parameters = append(operation.Parameters, *FieldBasicParameter("query", queryField))
+			}
+		}
 
-		operationDelete := *operation
-		operationDelete.ID = fmt.Sprintf("%s-%s", request.METHOD_DELETE, path)
+		// post data
+		if api.PostData != nil {
+			body := &spec.Parameter{}
+			body.In = "body"
+			body.Name = api.PostData.TypeName()
+			body.Description = api.PostData.TypeDescription()
+			body.Required = true
+			body.Schema = ITypeToSwaggerSchema(api.PostData)
 
-		operationOptions := *operation
-		operationOptions.ID = fmt.Sprintf("%s-%s", request.METHOD_OPTIONS, path)
+			operation.Parameters = append(operation.Parameters, *body)
+		}
 
-		operationHead := *operation
-		operationHead.ID = fmt.Sprintf("%s-%s", request.METHOD_HEAD, path)
+		// response data
+		successResponse := spec.Response{}
+		successResponse.Description = "success"
+		if api.RespData != nil {
+			// wrap data for ginbuilder.HandleFunc
+			if api.ApiHandlerFuncType == ApiHandlerFuncTypeGinbuilderHandleFunc {
+				successResponse.Schema = ITypeToSwaggerSchema(SuccessResponseStructType(api.RespData))
+			} else {
+				successResponse.Schema = ITypeToSwaggerSchema(api.RespData)
+			}
 
-		operationPatch := *operation
-		operationPatch.ID = fmt.Sprintf("%s-%s", request.METHOD_PATCH, path)
+		}
 
-		pathItem.Get = &operationGet
-		pathItem.Post = &operationPost
-		pathItem.Put = &operationPut
-		pathItem.Delete = &operationDelete
-		pathItem.Options = &operationOptions
-		pathItem.Head = &operationHead
-		pathItem.Patch = &operationPatch
+		operation.Responses = &spec.Responses{
+			ResponsesProps: spec.ResponsesProps{
+				StatusCodeResponses: map[int]spec.Response{
+					200: successResponse,
+				},
+			},
+		}
 
-	default:
-		logrus.Warnf("not supported method for swagger spec. method: %s", api.HttpMethod)
+		// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#pathsObject
+		switch api.HttpMethod {
+		case request.METHOD_GET:
+			pathItem.Get = operation
+		case request.METHOD_POST:
+			pathItem.Post = operation
+		case request.METHOD_PUT:
+			pathItem.Put = operation
+		case request.METHOD_DELETE:
+			pathItem.Delete = operation
+		case request.METHOD_OPTIONS:
+			pathItem.Options = operation
+		case request.METHOD_HEAD:
+			pathItem.Head = operation
+		case request.METHOD_PATCH:
+			pathItem.Patch = operation
+
+		case request.METHOD_ANY:
+			operationGet := *operation
+			operationGet.ID = fmt.Sprintf("%s-%s", request.METHOD_GET, path)
+
+			operationPost := *operation
+			operationPost.ID = fmt.Sprintf("%s-%s", request.METHOD_POST, path)
+
+			operationPut := *operation
+			operationPut.ID = fmt.Sprintf("%s-%s", request.METHOD_PUT, path)
+
+			operationDelete := *operation
+			operationDelete.ID = fmt.Sprintf("%s-%s", request.METHOD_DELETE, path)
+
+			operationOptions := *operation
+			operationOptions.ID = fmt.Sprintf("%s-%s", request.METHOD_OPTIONS, path)
+
+			operationHead := *operation
+			operationHead.ID = fmt.Sprintf("%s-%s", request.METHOD_HEAD, path)
+
+			operationPatch := *operation
+			operationPatch.ID = fmt.Sprintf("%s-%s", request.METHOD_PATCH, path)
+
+			pathItem.Get = &operationGet
+			pathItem.Post = &operationPost
+			pathItem.Put = &operationPut
+			pathItem.Delete = &operationDelete
+			pathItem.Options = &operationOptions
+			pathItem.Head = &operationHead
+			pathItem.Patch = &operationPatch
+
+		default:
+			logrus.Warnf("not supported method for swagger spec. method: %s", api.HttpMethod)
+		}
+
 	}
 
 	m.Swagger.PathsAdd(path, pathItem)
