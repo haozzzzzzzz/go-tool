@@ -330,7 +330,7 @@ func ITypeToSwaggerSchema(iType IType) (schema *spec.Schema) {
 		schema.Properties = make(map[string]spec.Schema)
 
 		for _, field := range structType.Fields {
-			if !field.Embedded { // 非嵌入的field
+			if !field.Embedded && field.Exported { // 非嵌入的、公开访问的field
 				jsonName := field.TagJson()
 				fieldSchema := ITypeToSwaggerSchema(field.TypeSpec)
 				fieldSchema.Description = field.Description

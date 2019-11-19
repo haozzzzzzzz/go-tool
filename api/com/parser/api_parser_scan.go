@@ -895,7 +895,7 @@ func parseType(
 			iType = structType
 		}
 
-	case *types.Struct: // 匿名
+	case *types.Struct:
 		structType := NewStructType()
 
 		tStructType := t.(*types.Struct)
@@ -934,10 +934,6 @@ func parseType(
 			field := NewField()
 
 			tField := tStructType.Field(i)
-			if !tField.Exported() {
-				continue
-			}
-
 			if typeAstExpr != nil { // 找到声明
 				astStructType, ok := typeAstExpr.(*ast.StructType)
 				if !ok {
@@ -977,7 +973,8 @@ func parseType(
 			fieldType := parseType(info, tField.Type())
 			field.TypeName = fieldType.TypeName()
 			field.TypeSpec = fieldType
-			field.Embedded = tField.Embedded()
+			field.Exported = tField.Exported() // 是否是公开的，内嵌类型为false
+			field.Embedded = tField.Embedded() // 内嵌
 
 			err := structType.AddFields(field)
 			if nil != err {

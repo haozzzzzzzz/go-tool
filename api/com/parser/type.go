@@ -47,6 +47,8 @@ type Field struct {
 	Tags     map[string]string `json:"tags" yaml:"tags"`
 	TypeSpec IType             `json:"type_spec" yaml:"type_spec"`
 
+	Exported bool `json:"exported" yaml:"exported"` // 是否是公开访问的。embedded类型为false
+
 	/*
 		是否是嵌入的属性。
 		type A struct {

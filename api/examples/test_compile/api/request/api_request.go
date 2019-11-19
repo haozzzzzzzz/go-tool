@@ -1,11 +1,22 @@
 package request
 
 import (
-	"github.com/haozzzzzzzz/go-tool/api/examples/test_compile/api/request/model"
 	"github.com/haozzzzzzzz/go-rapid-development/web/ginbuilder"
+	"github.com/haozzzzzzzz/go-tool/api/examples/test_compile/api/request/model"
 )
 
+type notExportedEmbedded struct {
+	FieldOfNotExportedEmbedded string `json:"field_of_not_exported_embedded" form:"field_of_not_exported_embedded"`
+	notExportedField           string `json:"not_exported_field" form:"not_exported_field"`
+}
+
+type ExportedEmbedded struct {
+	FieldOfExportedEmbedded string `json:"field_of_exported_embedded" form:"field_of_exported_embedded"`
+}
+
 type PostDataField struct {
+	A notExportedEmbedded `json:"a" form:"a"`
+	ExportedEmbedded
 	Field1 string `json:"filed_1" form:"filed_1"`
 	Field2 struct {
 		SubField1 string `json:"sub_field_1" form:"sub_field_1"`
