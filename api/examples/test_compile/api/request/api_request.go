@@ -40,7 +40,8 @@ var TestRequest ginbuilder.HandleFunc = ginbuilder.HandleFunc{
 
 		// request query data
 		type QueryData struct {
-			Key string `json:"key" form:"key"`
+			Key    string     `json:"key" form:"key"`
+			ArrIds [][]string `json:"arr_ids" form:"arr_ids"`
 		}
 		queryData := QueryData{}
 		retCode, err = ctx.BindQueryData(&queryData)

@@ -99,7 +99,7 @@ func (m *SwaggerSpec) parsePathApis(path string, apis []*ApiItem) (err error) {
 		// uri data
 		if api.UriData != nil {
 			for _, pathField := range api.UriData.Fields {
-				basicParameter := *FieldBasicParameter("path", pathField)
+				basicParameter := *NotBodyFieldParameter("path", pathField)
 				basicParameter.Required = true // require uri data
 				operation.Parameters = append(operation.Parameters, basicParameter)
 			}
@@ -108,14 +108,14 @@ func (m *SwaggerSpec) parsePathApis(path string, apis []*ApiItem) (err error) {
 		// header data
 		if api.HeaderData != nil {
 			for _, headerField := range api.HeaderData.Fields {
-				operation.Parameters = append(operation.Parameters, *FieldBasicParameter("header", headerField))
+				operation.Parameters = append(operation.Parameters, *NotBodyFieldParameter("header", headerField))
 			}
 		}
 
 		// query data
 		if api.QueryData != nil {
 			for _, queryField := range api.QueryData.Fields {
-				operation.Parameters = append(operation.Parameters, *FieldBasicParameter("query", queryField))
+				operation.Parameters = append(operation.Parameters, *NotBodyFieldParameter("query", queryField))
 			}
 		}
 
@@ -282,19 +282,38 @@ func (m *SwaggerSpec) Output() (output []byte, err error) {
 	return
 }
 
-// query、path基础类型参数
-func FieldBasicParameter(in string, field *Field) (parameter *spec.Parameter) {
-	parameter = &spec.Parameter{}
-	parameter.Name = field.TagJson()
-	parameter.In = in
-	parameter.Description = field.Description
-	parameter.Required = field.Required()
-	switch field.TypeSpec.(type) {
+// 非body里声明的类型参数
+// https://swagger.io/specification/v2/#parameterObject
+func NotBodyFieldParameter(in string, field *Field) (parameter *spec.Parameter) {
+	items := ITypeToSwaggerNotBodyItemsObject(field.TypeSpec)
+
+	parameter = &spec.Parameter{
+		CommonValidations: items.CommonValidations,
+		SimpleSchema:      items.SimpleSchema,
+		VendorExtensible:  items.VendorExtensible,
+		ParamProps: spec.ParamProps{
+			Name:        field.TagJson(),
+			In:          in,
+			Description: field.Description,
+			Required:    field.Required(),
+		},
+	}
+
+	return
+}
+
+func ITypeToSwaggerNotBodyItemsObject(iType IType) (items *spec.Items) {
+	items = spec.NewItems()
+	switch fieldType := iType.(type) {
+	case *ArrayType:
+		items.Type = "array"
+		items.Items = ITypeToSwaggerNotBodyItemsObject(fieldType.EltSpec)
+
 	case *BasicType:
-		parameter.Type = BasicTypeToSwaggerSchemaType(field.TypeName)
+		items.Type = BasicTypeToSwaggerSchemaType(fieldType.TypeName())
 
 	default:
-		parameter.Type = BasicTypeToSwaggerSchemaType(field.TypeName)
+		logrus.Warnf("not-in-body items type %s has not supported yet", iType)
 
 	}
 
