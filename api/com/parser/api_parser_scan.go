@@ -2,21 +2,18 @@ package parser
 
 import (
 	"errors"
+	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
+	"github.com/haozzzzzzzz/go-tool/api/com/mod"
 	"go/ast"
 	"go/importer"
 	"go/parser"
 	"go/token"
+	"go/types"
+	"golang.org/x/tools/go/packages"
+	"os"
 	"path/filepath"
 	"runtime/debug"
 	"sort"
-
-	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
-	"github.com/haozzzzzzzz/go-tool/api/com/mod"
-	"golang.org/x/tools/go/packages"
-
-	"go/types"
-
-	"os"
 
 	"fmt"
 
@@ -903,7 +900,6 @@ func parseType(
 		typeAstExpr := FindStructAstExprFromInfoTypes(info, tStructType)
 		if typeAstExpr == nil { // 找不到expr
 			hasFieldsJsonTag := false
-
 			numFields := tStructType.NumFields()
 			for i := 0; i <= numFields; i++ {
 				strTag := tStructType.Tag(i)
@@ -934,6 +930,11 @@ func parseType(
 			field := NewField()
 
 			tField := tStructType.Field(i)
+
+			if !tField.Exported() && !tField.Embedded() { // 非嵌入类型，并且不是公开的，则跳过
+				continue
+			}
+
 			if typeAstExpr != nil { // 找到声明
 				astStructType, ok := typeAstExpr.(*ast.StructType)
 				if !ok {
@@ -1086,6 +1087,15 @@ func FindStructAstExprFromInfoTypes(info *types.Info, t *types.Struct) (expr ast
 		if t == tStruct {
 			// 同一组astFiles生成的Types，内存中对象匹配成功
 			expr = tExpr
+
+			structExpr, ok := expr.(*ast.StructType)
+			if ok {
+				if t.NumFields() != len(structExpr.Fields.List) {
+					fmt.Println(t)
+					fmt.Println(tStruct)
+					fmt.Println(tExpr)
+				}
+			}
 
 		} else if t.String() == tStruct.String() {
 			// 如果是不同的astFiles生成的Types，可能astFile1中没有这个类型信息，但是另外一组astFiles导入到info里，这是同一个类型，内存对象不一样，但是整体结构是一样的
