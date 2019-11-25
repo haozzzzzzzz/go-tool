@@ -247,20 +247,14 @@ func commentApiRequestDataFieldDesc(key string, fieldTypeDesc interface{}, slave
 	}
 
 	if strFieldTypeDesc != "" {
-		vals := [3]string{} // description, type, tags
-		splitDefs := strings.Split(strFieldTypeDesc, "|")
-		for i := 0; i < 3 && i < len(splitDefs); i++ {
-			vals[i] = splitDefs[i]
-		}
-
+		vals := parseFieldTypeDescParts(strFieldTypeDesc)
 		field.Description = vals[0]
 		field.TypeName = vals[1]
-		field.TypeSpec = NewBasicType(vals[1])
 		field.Tags["json"] = key
 		field.Tags["binding"] = vals[2]
 	}
 
-	field.TypeSpec, err = commentApiRequestDataIType(fieldTypeDesc)
+	field.TypeSpec, err = commentApiRequestDataJsonDescToIType(fieldTypeDesc)
 	if nil != err {
 		logrus.Errorf("parse field type spec failed. error: %s.", err)
 		return
@@ -269,13 +263,24 @@ func commentApiRequestDataFieldDesc(key string, fieldTypeDesc interface{}, slave
 	return
 }
 
-func commentApiRequestDataIType(
+func parseFieldTypeDescParts(strFieldTypeDesc string) (vals [3]string) {
+	vals = [3]string{} // description, type, tags
+	splitDefs := strings.Split(strFieldTypeDesc, "|")
+	for i := 0; i < 3 && i < len(splitDefs); i++ {
+		vals[i] = splitDefs[i]
+	}
+	return
+}
+
+func commentApiRequestDataJsonDescToIType(
 	typeDesc interface{},
 ) (itype IType, err error) {
 	reflectType := reflect.TypeOf(typeDesc)
 	switch reflectType.Kind() {
 	case reflect.String:
-		itype = NewBasicType(typeDesc.(string))
+		strTypeDes := typeDesc.(string)
+		vals := parseFieldTypeDescParts(strTypeDes)
+		itype = NewBasicType(vals[1])
 
 	case reflect.Map:
 		mTypeDesc, ok := typeDesc.(map[string]interface{})
@@ -299,7 +304,7 @@ func commentApiRequestDataIType(
 
 		sliceType := NewArrayType()
 		if len(sliceTypeDesc) > 0 {
-			sliceType.EltSpec, err = commentApiRequestDataIType(sliceTypeDesc[0])
+			sliceType.EltSpec, err = commentApiRequestDataJsonDescToIType(sliceTypeDesc[0])
 			if nil != err {
 				logrus.Errorf("parse slice type elt spec failed. error: %s.", err)
 				return
