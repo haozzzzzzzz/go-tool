@@ -235,6 +235,8 @@ func SuccessResponseStructType(
 			Tags: map[string]string{
 				"json": "ret",
 			},
+			Embedded: false,
+			Exported: true,
 			TypeSpec: NewBasicType("uint32"),
 		},
 		{
@@ -244,6 +246,8 @@ func SuccessResponseStructType(
 			Tags: map[string]string{
 				"json": "msg",
 			},
+			Embedded: false,
+			Exported: true,
 			TypeSpec: NewBasicType("string"),
 		},
 		{
@@ -253,6 +257,8 @@ func SuccessResponseStructType(
 			Tags: map[string]string{
 				"json": "data",
 			},
+			Embedded: false,
+			Exported: true,
 			TypeSpec: respData,
 		},
 	}

@@ -141,7 +141,6 @@ func (m *SwaggerSpec) parsePathApis(path string, apis []*ApiItem) (err error) {
 			} else {
 				successResponse.Schema = ITypeToSwaggerSchema(api.RespData)
 			}
-
 		}
 
 		operation.Responses = &spec.Responses{
@@ -206,7 +205,6 @@ func (m *SwaggerSpec) parsePathApis(path string, apis []*ApiItem) (err error) {
 	}
 
 	m.Swagger.PathsAdd(path, pathItem)
-
 	return
 }
 
