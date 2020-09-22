@@ -8,5 +8,4 @@ var RootCmd = rootCmd
 
 func init() {
 	RootCmd.AddCommand(precompile.CommandPrecompile())
-	//RootCmd.AddCommand(ertn.CommandErrorReturn())
 }

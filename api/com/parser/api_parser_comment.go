@@ -320,6 +320,7 @@ func commentApiRequestDataJsonDescToIType(
 	return
 }
 
+// 注释标签
 type CommentTags struct {
 	Summary     string // 非tag的注释第一行是summary，其余是description
 	Description string
