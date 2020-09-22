@@ -1,6 +1,6 @@
 module github.com/haozzzzzzzz/go-tool
 
-go 1.12
+go 1.14
 
 require (
 	github.com/aws/aws-sdk-go v1.21.7
@@ -21,7 +21,7 @@ require (
 	github.com/spf13/viper v1.3.2
 	github.com/yuin/gopher-lua v0.0.0-20190514113301-1cd887cd7036
 	golang.org/x/tools v0.0.0-20190614205625-5aca471b1d59
-	gopkg.in/go-playground/validator.v9 v9.29.1
+	gopkg.in/go-playground/validator.v9 v9.31.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 )
