@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// compile RESTful http api
 func CommandApiCompile() *cobra.Command {
 	var serviceDir string
 	var notMod bool
