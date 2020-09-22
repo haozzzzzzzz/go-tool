@@ -9,11 +9,6 @@ import (
 	"strings"
 )
 
-const LineTagKeyDocUpCommon = "ws_doc_up_common"     // 上行消息公共参数
-const LineTagKeyDocDownCommon = "ws_doc_down_common" // 下行消息公共参数
-const LineTagKeyDocUpBody = "ws_doc_up_body"         // 上行消息消息体
-const LineTagKeyDocDownBody = "ws_doc_down_body"     // 下行消息消息体
-
 type CommentText struct {
 	Tags  map[string]string `json:"tags"`
 	Lines []string          `json:"lines"` // 除了tag，文本行
@@ -73,7 +68,6 @@ func NewCommentText(text string) (commentText *CommentText, err error) {
 		}
 
 		matchedResult := matched[0]
-		fmt.Println(matchedResult)
 		matchedText := matchedResult[0]
 		matchedTagKey := matchedResult[1]
 		matchedTagKey = strings.TrimSpace(matchedTagKey)
