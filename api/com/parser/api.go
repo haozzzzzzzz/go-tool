@@ -2,25 +2,26 @@ package parser
 
 import (
 	"fmt"
+	"github.com/haozzzzzzzz/go-tool/common/source"
 	"github.com/sirupsen/logrus"
 	"reflect"
 )
 
 type ApiItemParams struct {
-	HeaderData *StructType `json:"header_data" yaml:"header_data"`
-	UriData    *StructType `json:"uri_data" yaml:"uri_data"`
-	QueryData  *StructType `json:"query_data" yaml:"query_data"`
-	PostData   IType       `json:"post_data" yaml:"post_data"`
-	RespData   IType       `json:"response_data" yaml:"response_data"`
+	HeaderData *source.StructType `json:"header_data" yaml:"header_data"`
+	UriData    *source.StructType `json:"uri_data" yaml:"uri_data"`
+	QueryData  *source.StructType `json:"query_data" yaml:"query_data"`
+	PostData   source.IType       `json:"post_data" yaml:"post_data"`
+	RespData   source.IType       `json:"response_data" yaml:"response_data"`
 }
 
 func NewApiItemParams() *ApiItemParams {
 	return &ApiItemParams{
-		HeaderData: NewStructType(),
-		UriData:    NewStructType(),
-		QueryData:  NewStructType(),
-		PostData:   NewStructType(), // default
-		RespData:   NewStructType(), // default
+		HeaderData: source.NewStructType(),
+		UriData:    source.NewStructType(),
+		QueryData:  source.NewStructType(),
+		PostData:   source.NewStructType(), // default
+		RespData:   source.NewStructType(), // default
 	}
 }
 
@@ -32,7 +33,7 @@ func (m *ApiItemParams) MergeApiItemParams(items ...*ApiItemParams) (err error) 
 
 		if item.HeaderData != nil && len(item.HeaderData.Fields) > 0 {
 			if m.HeaderData == nil {
-				m.HeaderData = NewStructType()
+				m.HeaderData = source.NewStructType()
 			}
 
 			err = m.HeaderData.AddFields(item.HeaderData.Fields...)
@@ -44,7 +45,7 @@ func (m *ApiItemParams) MergeApiItemParams(items ...*ApiItemParams) (err error) 
 
 		if item.UriData != nil && len(item.UriData.Fields) > 0 {
 			if m.UriData == nil {
-				m.UriData = NewStructType()
+				m.UriData = source.NewStructType()
 			}
 
 			err = m.UriData.AddFields(item.UriData.Fields...)
@@ -56,7 +57,7 @@ func (m *ApiItemParams) MergeApiItemParams(items ...*ApiItemParams) (err error) 
 
 		if item.QueryData != nil && len(item.QueryData.Fields) > 0 {
 			if m.QueryData == nil {
-				m.QueryData = NewStructType()
+				m.QueryData = source.NewStructType()
 			}
 
 			err = m.QueryData.AddFields(item.QueryData.Fields...)
@@ -68,16 +69,16 @@ func (m *ApiItemParams) MergeApiItemParams(items ...*ApiItemParams) (err error) 
 
 		if item.PostData != nil {
 			switch itemPostData := item.PostData.(type) {
-			case *StructType:
+			case *source.StructType:
 				if itemPostData.IsEmpty() {
 					break
 				}
 
 				if m.PostData == nil {
-					m.PostData = NewStructType()
+					m.PostData = source.NewStructType()
 				}
 
-				mPostStruct, ok := m.PostData.(*StructType)
+				mPostStruct, ok := m.PostData.(*source.StructType)
 				if !ok {
 					logrus.Warnf("can not merge post data, because of different type. %s %s", reflect.TypeOf(item.PostData), reflect.TypeOf(m.PostData))
 					break
@@ -94,17 +95,17 @@ func (m *ApiItemParams) MergeApiItemParams(items ...*ApiItemParams) (err error) 
 
 		if item.RespData != nil {
 			if m.RespData == nil {
-				m.RespData = NewStructType()
+				m.RespData = source.NewStructType()
 			}
 
 			switch item.RespData.(type) {
-			case *StructType: // only merge struct type
-				itemRespStruct := item.RespData.(*StructType)
+			case *source.StructType: // only merge struct type
+				itemRespStruct := item.RespData.(*source.StructType)
 				if itemRespStruct == nil {
 					break
 				}
 
-				mRespStruct, ok := m.RespData.(*StructType)
+				mRespStruct, ok := m.RespData.(*source.StructType)
 				if ok {
 					err = mRespStruct.AddFields(itemRespStruct.Fields...)
 					if nil != err {
@@ -222,12 +223,12 @@ func (m *ApiItem) MergeInfoFomCommentTags(tags *CommentTags) {
 //	Data       interface{} `json:"data"`
 //}
 func SuccessResponseStructType(
-	respData IType,
-) (successResp *StructType) {
-	successResp = NewStructType()
+	respData source.IType,
+) (successResp *source.StructType) {
+	successResp = source.NewStructType()
 	successResp.Name = "SuccessResponse"
 	successResp.Description = "api success response"
-	successResp.Fields = []*Field{
+	successResp.Fields = []*source.Field{
 		{
 			Name:        "ReturnCode",
 			TypeName:    "uint32",
@@ -237,7 +238,7 @@ func SuccessResponseStructType(
 			},
 			Embedded: false,
 			Exported: true,
-			TypeSpec: NewBasicType("uint32"),
+			TypeSpec: source.NewBasicType("uint32"),
 		},
 		{
 			Name:        "Message",
@@ -248,7 +249,7 @@ func SuccessResponseStructType(
 			},
 			Embedded: false,
 			Exported: true,
-			TypeSpec: NewBasicType("string"),
+			TypeSpec: source.NewBasicType("string"),
 		},
 		{
 			Name:        "Data",

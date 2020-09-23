@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
 	"github.com/haozzzzzzzz/go-tool/api/com/mod"
+	"github.com/haozzzzzzzz/go-tool/common/source"
 	"go/ast"
 	"go/importer"
 	"go/parser"
@@ -807,7 +808,7 @@ func parseApiFuncBody(
 						continue
 					}
 
-					structType, ok := iType.(*StructType)
+					structType, ok := iType.(*source.StructType)
 					if ok {
 						apiItem.HeaderData = structType
 					} else {
@@ -820,7 +821,7 @@ func parseApiFuncBody(
 						continue
 					}
 
-					structType, ok := iType.(*StructType)
+					structType, ok := iType.(*source.StructType)
 					if ok {
 						apiItem.UriData = structType
 					} else {
@@ -833,7 +834,7 @@ func parseApiFuncBody(
 						continue
 					}
 
-					structType, ok := iType.(*StructType)
+					structType, ok := iType.(*source.StructType)
 					if ok {
 						apiItem.QueryData = structType
 					} else {
@@ -871,12 +872,12 @@ func parseApiFuncBody(
 func parseType(
 	info *types.Info,
 	t types.Type,
-) (iType IType) {
-	iType = NewBasicType("Unsupported")
+) (iType source.IType) {
+	iType = source.NewBasicType("Unsupported")
 
 	switch t.(type) {
 	case *types.Basic:
-		iType = NewBasicType(t.(*types.Basic).Name())
+		iType = source.NewBasicType(t.(*types.Basic).Name())
 
 	case *types.Pointer:
 		iType = parseType(info, t.(*types.Pointer).Elem())
@@ -886,14 +887,14 @@ func parseType(
 		iType = parseType(info, tNamed.Underlying())
 
 		// 如果是structType
-		structType, ok := iType.(*StructType)
+		structType, ok := iType.(*source.StructType)
 		if ok {
 			structType.Name = tNamed.Obj().Name()
 			iType = structType
 		}
 
 	case *types.Struct:
-		structType := NewStructType()
+		structType := source.NewStructType()
 
 		tStructType := t.(*types.Struct)
 
@@ -927,7 +928,7 @@ func parseType(
 
 		numFields := tStructType.NumFields()
 		for i := 0; i < numFields; i++ {
-			field := NewField()
+			field := source.NewField()
 
 			tField := tStructType.Field(i)
 
@@ -993,7 +994,7 @@ func parseType(
 		iType = structType
 
 	case *types.Slice:
-		arrType := NewArrayType()
+		arrType := source.NewArrayType()
 		typeSlice := t.(*types.Slice)
 		eltType := parseType(info, typeSlice.Elem())
 		arrType.EltSpec = eltType
@@ -1003,7 +1004,7 @@ func parseType(
 		iType = arrType
 
 	case *types.Array:
-		arrType := NewArrayType()
+		arrType := source.NewArrayType()
 		typeArr := t.(*types.Array)
 		eltType := parseType(info, typeArr.Elem())
 		arrType.Len = typeArr.Len()
@@ -1018,7 +1019,7 @@ func parseType(
 		iType = arrType
 
 	case *types.Map:
-		mapType := NewMapType()
+		mapType := source.NewMapType()
 		tMap := t.(*types.Map)
 		mapType.ValueSpec = parseType(info, tMap.Elem())
 		mapType.KeySpec = parseType(info, tMap.Key())
@@ -1027,7 +1028,7 @@ func parseType(
 		iType = mapType
 
 	case *types.Interface:
-		iType = NewInterfaceType()
+		iType = source.NewInterfaceType()
 
 	default:
 		logrus.Warnf("parse unsupported type %#v", t)

@@ -2,6 +2,7 @@ package parse
 
 import (
 	"github.com/haozzzzzzzz/go-rapid-development/utils/ujson"
+	"github.com/haozzzzzzzz/go-tool/common/source"
 	"github.com/sirupsen/logrus"
 	"strings"
 )
@@ -156,7 +157,7 @@ func WsTagFromCommentText(text string) (
 	wsTag *WsTag,
 	err error,
 ) {
-	commentText, err := NewCommentText(text)
+	commentText, err := source.NewCommentText(text)
 	if err != nil {
 		logrus.Errorf("new comment text failed. error: %s", err)
 		return

@@ -3,6 +3,7 @@ package parser
 import (
 	"bufio"
 	"encoding/json"
+	"github.com/haozzzzzzzz/go-tool/common/source"
 	"io"
 	"regexp"
 
@@ -204,12 +205,12 @@ func parseCommentTextToApi(
 
 func commentApiRequestDataToStructType(
 	mapData map[string]interface{},
-) (structType *StructType, err error) {
+) (structType *source.StructType, err error) {
 	if mapData == nil {
 		return
 	}
 
-	structType = NewStructType()
+	structType = source.NewStructType()
 	for key, typeDesc := range mapData {
 		if strings.HasPrefix(key, "__") {
 			continue
@@ -233,12 +234,12 @@ func commentApiRequestDataToStructType(
 	return
 }
 
-func commentApiRequestDataFieldDesc(key string, fieldTypeDesc interface{}, slaveFieldDesc string) (field *Field, err error) {
+func commentApiRequestDataFieldDesc(key string, fieldTypeDesc interface{}, slaveFieldDesc string) (field *source.Field, err error) {
 	if fieldTypeDesc == nil {
 		return
 	}
 
-	field = NewField()
+	field = source.NewField()
 	field.Name = key
 
 	strFieldTypeDesc, ok := fieldTypeDesc.(string)
@@ -274,13 +275,13 @@ func parseFieldTypeDescParts(strFieldTypeDesc string) (vals [3]string) {
 
 func commentApiRequestDataJsonDescToIType(
 	typeDesc interface{},
-) (itype IType, err error) {
+) (itype source.IType, err error) {
 	reflectType := reflect.TypeOf(typeDesc)
 	switch reflectType.Kind() {
 	case reflect.String:
 		strTypeDes := typeDesc.(string)
 		vals := parseFieldTypeDescParts(strTypeDes)
-		itype = NewBasicType(vals[1])
+		itype = source.NewBasicType(vals[1])
 
 	case reflect.Map:
 		mTypeDesc, ok := typeDesc.(map[string]interface{})
@@ -302,7 +303,7 @@ func commentApiRequestDataJsonDescToIType(
 			return
 		}
 
-		sliceType := NewArrayType()
+		sliceType := source.NewArrayType()
 		if len(sliceTypeDesc) > 0 {
 			sliceType.EltSpec, err = commentApiRequestDataJsonDescToIType(sliceTypeDesc[0])
 			if nil != err {

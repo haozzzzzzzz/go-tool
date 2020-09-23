@@ -1,4 +1,4 @@
-package parser
+package source
 
 import (
 	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"

@@ -4,6 +4,7 @@ This package parses api items to swagger specification
 package parser
 
 import (
+	"github.com/haozzzzzzzz/go-tool/common/source"
 	"strings"
 
 	"fmt"
@@ -282,7 +283,7 @@ func (m *SwaggerSpec) Output() (output []byte, err error) {
 
 // 非body里声明的类型参数
 // https://swagger.io/specification/v2/#parameterObject
-func NotBodyFieldParameter(in string, field *Field) (parameter *spec.Parameter) {
+func NotBodyFieldParameter(in string, field *source.Field) (parameter *spec.Parameter) {
 	items := ITypeToSwaggerNotBodyItemsObject(field.TypeSpec)
 
 	parameter = &spec.Parameter{
@@ -300,14 +301,14 @@ func NotBodyFieldParameter(in string, field *Field) (parameter *spec.Parameter) 
 	return
 }
 
-func ITypeToSwaggerNotBodyItemsObject(iType IType) (items *spec.Items) {
+func ITypeToSwaggerNotBodyItemsObject(iType source.IType) (items *spec.Items) {
 	items = spec.NewItems()
 	switch fieldType := iType.(type) {
-	case *ArrayType:
+	case *source.ArrayType:
 		items.Type = "array"
 		items.Items = ITypeToSwaggerNotBodyItemsObject(fieldType.EltSpec)
 
-	case *BasicType:
+	case *source.BasicType:
 		items.Type = BasicTypeToSwaggerSchemaType(fieldType.TypeName())
 
 	default:
@@ -337,11 +338,11 @@ func BasicTypeToSwaggerSchemaType(fieldType string) (swagType string) {
 	return
 }
 
-func ITypeToSwaggerSchema(iType IType) (schema *spec.Schema) {
+func ITypeToSwaggerSchema(iType source.IType) (schema *spec.Schema) {
 	schema = &spec.Schema{}
 	switch iType.(type) {
-	case *StructType:
-		structType := iType.(*StructType)
+	case *source.StructType:
+		structType := iType.(*source.StructType)
 		schema.Type = []string{"object"}
 		schema.Required = make([]string, 0)
 		schema.Properties = make(map[string]spec.Schema)
@@ -360,7 +361,7 @@ func ITypeToSwaggerSchema(iType IType) (schema *spec.Schema) {
 		}
 
 		for _, embeddedField := range structType.Embedded {
-			_, ok := embeddedField.TypeSpec.(*StructType)
+			_, ok := embeddedField.TypeSpec.(*source.StructType)
 			if !ok {
 				continue
 			}
@@ -386,25 +387,25 @@ func ITypeToSwaggerSchema(iType IType) (schema *spec.Schema) {
 			}
 		}
 
-	case *MapType:
-		mapType := iType.(*MapType)
+	case *source.MapType:
+		mapType := iType.(*source.MapType)
 		schema.Type = []string{"object"}
 		schema.AdditionalProperties = &spec.SchemaOrBool{}
 
 		schema.AdditionalProperties.Schema = ITypeToSwaggerSchema(mapType.ValueSpec)
 
-	case *ArrayType:
-		arrayType := iType.(*ArrayType)
+	case *source.ArrayType:
+		arrayType := iType.(*source.ArrayType)
 		schema.Type = []string{"array"}
 		schema.Items = &spec.SchemaOrArray{}
 		schema.Items.Schema = ITypeToSwaggerSchema(arrayType.EltSpec)
 
-	case *InterfaceType:
+	case *source.InterfaceType:
 		//interType := iType.(*InterfaceType)
 		schema.Type = []string{"object"}
 
-	case *BasicType:
-		basicType := iType.(*BasicType)
+	case *source.BasicType:
+		basicType := iType.(*source.BasicType)
 		schemaType := BasicTypeToSwaggerSchemaType(basicType.Name)
 		schema.Type = []string{schemaType}
 

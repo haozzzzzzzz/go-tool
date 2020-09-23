@@ -3,6 +3,7 @@ package parser
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/haozzzzzzzz/go-tool/common/source"
 	"testing"
 )
 
@@ -11,8 +12,8 @@ func TestSaveApisSwaggerSpec(t *testing.T) {
 	swgSpc.Apis([]*ApiItem{
 		{
 			ApiItemParams: ApiItemParams{
-				HeaderData: &StructType{
-					Fields: []*Field{
+				HeaderData: &source.StructType{
+					Fields: []*source.Field{
 						{
 							Name:     "xx",
 							TypeName: "string",
@@ -24,8 +25,8 @@ func TestSaveApisSwaggerSpec(t *testing.T) {
 						},
 					},
 				},
-				UriData: &StructType{
-					Fields: []*Field{
+				UriData: &source.StructType{
+					Fields: []*source.Field{
 						{
 							Name:     "tt",
 							TypeName: "int64",
