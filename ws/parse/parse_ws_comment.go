@@ -10,6 +10,7 @@ import (
 // tag key类型
 type WsTagKeyType string
 
+const WsTagKeyMsgIdType WsTagKeyType = "ws_doc_msg_id_type"  // 消息Id类型
 const WsTagKeyUpCommon WsTagKeyType = "ws_doc_up_common"     // 上行消息公共参数
 const WsTagKeyDownCommon WsTagKeyType = "ws_doc_down_common" // 下行消息公共参数
 const WsTagKeyCommon WsTagKeyType = "ws_doc_common"          // 上下行消息公共参数
@@ -43,6 +44,7 @@ type WsTagDoc struct {
 type WsTag struct {
 	Valid         bool           `json:"valid"` // 是否包含WsTag
 	TagKeys       []WsTagKeyType `json:"tag_keys"`
+	IsMsgIdType   bool           `json:"is_msg_id_type"`
 	HasUpCommon   bool           `json:"has_up_common"`
 	HasDownCommon bool           `json:"has_down_common"`
 	UpBodys       []*WsTagBody   `json:"up_bodys"`
@@ -68,6 +70,11 @@ func (m *WsTag) String() (str string) {
 		return
 	}
 	str = string(bObj)
+	return
+}
+
+func (m *WsTag) parseMsgIdType(tagKey WsTagKeyType, tagValue string) (err error) {
+	m.IsMsgIdType = true
 	return
 }
 
@@ -127,6 +134,7 @@ type TagParseHandler func(tagKey WsTagKeyType, tagValue string) (err error)
 
 func (m *WsTag) parseTag(tagKey WsTagKeyType, tagValue string) (err error) {
 	tagParsers := map[WsTagKeyType]TagParseHandler{
+		WsTagKeyMsgIdType:  m.parseMsgIdType,
 		WsTagKeyUpCommon:   m.parseUpCommon,
 		WsTagKeyDownCommon: m.parseDownCommon,
 		WsTagKeyCommon:     m.parseCommon,

@@ -9,9 +9,9 @@ import (
 	"os"
 )
 
-const ProjectFileMode os.FileMode = os.ModePerm ^ 0111
+const ProjectFileMode os.FileMode = os.ModePerm ^ 0111 // rw-rw-rw
 
-const ProjectDirMode os.FileMode = os.ModePerm
+const ProjectDirMode os.FileMode = os.ModePerm ^ 0111 // rw-rw-rw
 
 type Workspace struct {
 	ProjectDir    string                    `yaml:"project_dir" validate:"required"`
