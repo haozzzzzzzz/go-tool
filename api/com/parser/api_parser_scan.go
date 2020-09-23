@@ -3,8 +3,8 @@ package parser
 import (
 	"errors"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
-	"github.com/haozzzzzzzz/go-tool/api/com/mod"
 	"github.com/haozzzzzzzz/go-tool/common/source"
+	"github.com/haozzzzzzzz/go-tool/common/source/mod"
 	"go/ast"
 	"go/importer"
 	"go/parser"
