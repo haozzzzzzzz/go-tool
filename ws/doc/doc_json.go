@@ -13,7 +13,7 @@ func init() {
 }
 
 func WriteDocJson(
-	wsTypes *parse.WsTypes,
+	wsTypes *parse.WsTypesOutput,
 	format string,
 	filepath string,
 ) (err error) {

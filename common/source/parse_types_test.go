@@ -1,9 +1,15 @@
 package source
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestParseTypes(t *testing.T) {
-	err := parseTypes("/Users/hao/Documents/Projects/Go/ws_doc")
+	dir := "/Users/hao/Documents/Projects/Go/ws_doc"
+	parser := NewTypesParser(dir)
+	err := parser.ParseTypes(func(params *TypeFilterParams) {
+
+	})
 	if err != nil {
 		t.Error(err)
 		return

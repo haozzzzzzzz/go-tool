@@ -98,7 +98,7 @@ Description=${userServiceName}
 After=network.target awslogsd.service
 
 [Service]
-Type=simple
+TypeName=simple
 WorkingDirectory=${serviceDir}
 ExecStart=${serviceDir}/main
 ExecReload=/bin/kill -s HUP "'$MAINPID'"

@@ -20,19 +20,29 @@ const WsTagKeyBody WsTagKeyType = "ws_doc_body"              // 上下行消息�
 
 type WsTagBody struct {
 	TagKey WsTagKeyType `json:"tag_key"`
-	MsgId  string       `json:"msg_id"` // 消息Id
+	MsgIds []string     `json:"msg_id"` // 消息Id列表
 }
 
-// <0:msg_id>|<...>
+// <0:msg_id1, msg_id2, msg_id3>|<...>
 func NewWsTagBody(tagKey WsTagKeyType, tagValue string) (body *WsTagBody) {
 	body = &WsTagBody{
 		TagKey: tagKey,
+		MsgIds: make([]string, 0),
 	}
 
 	valParts := strings.Split(tagValue, "|")
 	lenParts := len(valParts)
 	if lenParts > 0 {
-		body.MsgId = strings.TrimSpace(valParts[0])
+		strMsgIds := strings.TrimSpace(valParts[0])
+		msgIds := strings.Split(strMsgIds, ",")
+		for _, msgId := range msgIds {
+			msgId = strings.TrimSpace(msgId)
+			if msgId == "" {
+				continue
+			}
+
+			body.MsgIds = append(body.MsgIds, msgId)
+		}
 	}
 	return
 }

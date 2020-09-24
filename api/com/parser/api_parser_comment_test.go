@@ -15,7 +15,7 @@ func TestParseApisFromPkgCommentText(t *testing.T) {
 		"_uid": "用户ID|string|required"
 	},
 	"header_data": {
-		"Content-Type": "内容类型|string|required"
+		"Content-TypeName": "内容类型|string|required"
 	}
 }
 @api_doc_common_end

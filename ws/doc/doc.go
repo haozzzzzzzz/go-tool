@@ -8,7 +8,7 @@ import (
 
 // 将ws写入doc
 func WriteDoc(
-	wsTypes *parse.WsTypes,
+	wsTypes *parse.WsTypesOutput,
 	format string,
 	filepath string,
 ) (err error) {
@@ -26,7 +26,7 @@ func WriteDoc(
 	return
 }
 
-type FileFormatWriter func(wsTypes *parse.WsTypes, format string, filepath string) (err error)
+type FileFormatWriter func(wsTypes *parse.WsTypesOutput, format string, filepath string) (err error)
 
 var FileFormatWriterMap = make(map[string]FileFormatWriter)
 

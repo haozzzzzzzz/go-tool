@@ -23,14 +23,31 @@ func NewTypesParser(
 	return
 }
 
-type ParseTypeFilter func() (match bool)
-
-func (m *TypesParser) Parse(filter ParseTypeFilter) (err error) {
-	// TODO
-	return
+type ParsedType struct {
+	TypesInfo *types.Info
+	TypeName  *types.TypeName
+	Doc       string
+	Comment   string
 }
 
-func parseTypes(dir string) (err error) {
+type ParsedVal struct {
+	TypeInfo *types.Info
+	Type     types.Type
+	Name     string
+	Value    string
+	Doc      string
+	Comment  string
+}
+
+func (m *TypesParser) Parse() (
+	parsedTypes []*ParsedType,
+	parsedVals []*ParsedVal,
+	err error,
+) {
+	parsedTypes = make([]*ParsedType, 0)
+	parsedVals = make([]*ParsedVal, 0)
+
+	dir := m.rootDir
 	mode := packages.NeedImports |
 		packages.NeedDeps |
 		packages.NeedSyntax |
@@ -62,23 +79,82 @@ func parseTypes(dir string) (err error) {
 			continue
 		}
 
-		for pkgTypeExpr, pkgType := range pkg.TypesInfo.Types {
-			_ = pkgTypeExpr
-			_ = pkgType
-			//fmt.Printf("%#v\n", pkgType.Type.String())
-			fmt.Printf("%#v\n", pkgTypeExpr)
+		// 节点映射
+		// 用于查找语法和注释
+		specMapGenDecl := make(map[ast.Spec]*ast.GenDecl)
+		for _, astFile := range pkg.Syntax {
+			for _, decl := range astFile.Decls {
+				genDecl, ok := decl.(*ast.GenDecl)
+				if !ok {
+					continue
+				}
+
+				for _, spec := range genDecl.Specs {
+					specMapGenDecl[spec] = genDecl
+				}
+			}
 		}
 
-		//for ident, def := range pkg.TypesInfo.Defs {
-		//	_ = ident
-		//	fmt.Println(def)
-		//}
+		// type definition
+		for ident, def := range pkg.TypesInfo.Defs {
+			switch defType := def.(type) {
+			case *types.TypeName:
+				spec, ok := ident.Obj.Decl.(*ast.TypeSpec)
+				if !ok {
+					logrus.Warnf("convert types.TypeName decl to *ast.TypeSpec not ok")
+					break
+				}
 
-		//for ident, obj := range pkg.TypesInfo.Uses {
-		//	_ = ident
-		//	fmt.Println(ident.String())
-		//	fmt.Println(obj)
-		//}
+				typeDecl, ok := specMapGenDecl[spec]
+				if !ok || typeDecl == nil {
+					logrus.Warnf("type spec can not find type decl. name: %s", ident.Obj.Name)
+					break
+				}
+
+				parsedTypes = append(parsedTypes, &ParsedType{
+					TypesInfo: pkg.TypesInfo,
+					TypeName:  defType,
+					Doc:       strings.TrimSpace(typeDecl.Doc.Text()),
+					Comment:   strings.TrimSpace(spec.Comment.Text()),
+				})
+
+			case *types.Const, *types.Var:
+				spec, ok := ident.Obj.Decl.(*ast.ValueSpec)
+				if !ok || spec == nil {
+					break
+				}
+
+				varDecl, ok := specMapGenDecl[spec]
+				if !ok || varDecl == nil {
+					logrus.Warnf("value spec can not find decl. name: %s", ident.Obj.Name)
+					break
+				}
+
+				val := ""
+				if len(spec.Values) >= 1 {
+					baseLit, ok := spec.Values[0].(*ast.BasicLit)
+					if ok {
+						val = baseLit.Value
+					}
+				}
+
+				parsedVal := &ParsedVal{
+					TypeInfo: pkg.TypesInfo,
+					Type:     defType.Type(),
+					Name:     defType.Name(),
+					Value:    val,
+					Doc:      strings.TrimSpace(varDecl.Doc.Text()), // TODO 目前还不能解析代码末尾的注释
+					Comment:  strings.TrimSpace(spec.Comment.Text()),
+				}
+
+				parsedVals = append(parsedVals, parsedVal)
+
+			default:
+				break
+
+			}
+
+		}
 
 	}
 
