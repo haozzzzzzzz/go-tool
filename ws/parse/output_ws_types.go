@@ -31,6 +31,7 @@ type WsMsgBodyOutput struct {
 
 // ws types output structure
 type WsTypesOutput struct {
+	SpecVersion    string               `json:"spec_version"`
 	MsgIds         []*WsMsgIdOutput     `json:"msg_ids" yaml:"msg_ids"`
 	UpMsgCommons   []*WsMsgCommonOutput `json:"up_msg_commons" yaml:"up_msg_commons"`
 	UpMsgBodys     []*WsMsgBodyOutput   `json:"up_msg_bodys" yaml:"up_msg_bodys"`
@@ -38,8 +39,11 @@ type WsTypesOutput struct {
 	DownMsgBodys   []*WsMsgBodyOutput   `json:"down_msg_bodys" yaml:"down_msg_bodys"`
 }
 
+const LatestWsTypeOutputSpecVersion string = "v0.1.0"
+
 func NewWsTypesOutput() (output *WsTypesOutput) {
 	output = &WsTypesOutput{
+		SpecVersion:    LatestWsTypeOutputSpecVersion,
 		MsgIds:         []*WsMsgIdOutput{},
 		UpMsgCommons:   []*WsMsgCommonOutput{},
 		UpMsgBodys:     []*WsMsgBodyOutput{},
