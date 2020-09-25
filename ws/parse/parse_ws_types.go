@@ -7,8 +7,7 @@ import (
 )
 
 type WsTypesParser struct {
-	parser *source.TypesParser
-
+	rootDir string
 	wsTypes *WsTypes
 }
 
@@ -16,14 +15,14 @@ func NewWsTypesParser(
 	rootDir string,
 ) *WsTypesParser {
 	return &WsTypesParser{
-		parser:  source.NewTypesParser(rootDir),
+		rootDir: rootDir,
 		wsTypes: NewWsTypes(),
 	}
 }
 
 // 解析含有ws标签的类型
 func (m *WsTypesParser) ParseWsTypes() (err error) {
-	parsedTypes, parsedVals, err := m.parser.Parse()
+	parsedTypes, parsedVals, err := source.Parse(m.rootDir)
 	if err != nil {
 		logrus.Errorf("parse source types failed. error: %s", err)
 		return

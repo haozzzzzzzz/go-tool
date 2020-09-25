@@ -36,3 +36,11 @@ func BindFileFormatWriter(formats []string, writer FileFormatWriter) {
 		FileFormatWriterMap[format] = writer
 	}
 }
+
+func GetSupportedFileFormat() (formats []string) {
+	formats = make([]string, 0)
+	for format, _ := range FileFormatWriterMap {
+		formats = append(formats, format)
+	}
+	return
+}

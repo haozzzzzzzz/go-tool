@@ -25,11 +25,11 @@ type BasicType struct {
 	Description string `json:"description" yaml:"description"`
 }
 
-func (m BasicType) TypeName() string {
+func (m *BasicType) TypeName() string {
 	return m.Name
 }
 
-func (m BasicType) TypeDescription() string {
+func (m *BasicType) TypeDescription() string {
 	return m.Description
 }
 

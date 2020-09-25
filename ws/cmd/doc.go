@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/haozzzzzzzz/go-tool/ws/doc"
 	"github.com/haozzzzzzzz/go-tool/ws/parse"
 	"github.com/sirupsen/logrus"
@@ -51,6 +52,13 @@ func DocCmd() (command *cobra.Command) {
 			logrus.Infoln("finish")
 		},
 	}
+
+	oldHelpFunc := command.HelpFunc()
+	command.SetHelpFunc(func(command *cobra.Command, i []string) {
+		oldHelpFunc(command, i)
+		fmt.Printf("\nFile Format Options:\n")
+		fmt.Printf("  %s\n", strings.Join(doc.GetSupportedFileFormat(), ", "))
+	})
 
 	flags := command.Flags()
 	flags.StringVarP(&rootDir, "root_dir", "d", "./", "source root dir")

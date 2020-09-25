@@ -9,20 +9,6 @@ import (
 	"strings"
 )
 
-// 类型解析器
-type TypesParser struct {
-	rootDir string
-}
-
-func NewTypesParser(
-	rootDir string, // 根目录
-) (parser *TypesParser) {
-	parser = &TypesParser{
-		rootDir: rootDir,
-	}
-	return
-}
-
 type ParsedType struct {
 	TypesInfo *types.Info
 	TypeName  *types.TypeName
@@ -39,7 +25,9 @@ type ParsedVal struct {
 	Comment  string
 }
 
-func (m *TypesParser) Parse() (
+func Parse(
+	dir string,
+) (
 	parsedTypes []*ParsedType,
 	parsedVals []*ParsedVal,
 	err error,
@@ -47,7 +35,6 @@ func (m *TypesParser) Parse() (
 	parsedTypes = make([]*ParsedType, 0)
 	parsedVals = make([]*ParsedVal, 0)
 
-	dir := m.rootDir
 	mode := packages.NeedImports |
 		packages.NeedDeps |
 		packages.NeedSyntax |
@@ -161,10 +148,19 @@ func (m *TypesParser) Parse() (
 	return
 }
 
+// 类型解析器
+var iTypeMap = map[types.Type]IType{}
+
 func ParseType(
 	info *types.Info,
 	t types.Type,
 ) (iType IType) {
+	var ok bool
+	iType, ok = iTypeMap[t]
+	if ok {
+		return
+	}
+
 	iType = NewBasicType("Unsupported")
 
 	switch t.(type) {
@@ -425,5 +421,24 @@ func RemoveCommentStartEndToken(text string) (newText string) {
 	newText = strings.Replace(newText, "/*", "", 1)
 	newText = strings.Replace(newText, "*/", "", 1)
 	newText = strings.TrimSpace(newText)
+	return
+}
+
+// TypeIdent 类型定义或者类别名
+type TypeIdent struct {
+	TypeName *types.TypeName
+	IType    IType
+}
+
+// 类型定义或者类别名
+func ParseTypeName(
+	info *types.Info,
+	typeName *types.TypeName,
+) (typeIdent *TypeIdent) {
+	typeIdent = &TypeIdent{
+		TypeName: typeName,
+		IType:    ParseType(info, typeName.Type()), // 真实类型
+	}
+
 	return
 }
