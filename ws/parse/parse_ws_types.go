@@ -132,14 +132,20 @@ func (m *WsTypesParser) msgIdFilter(parsedVal *source.ParsedVal) (err error) {
 		return
 	}
 
-	m.wsTypes.MsgIds = append(m.wsTypes.MsgIds, parsedVal)
+	existsVal, ok := m.wsTypes.MsgIdMap[parsedVal.Value]
+	if ok {
+		logrus.Warnf("found duplicate msg_id variable. value: %s, names: %s, %s", parsedVal.Value, parsedVal.Name, existsVal.Name)
+		return
+	}
+
+	m.wsTypes.MsgIdMap[parsedVal.Value] = parsedVal
 	return
 }
 
 // msg_id remap body
 func (m *WsTypesParser) msgIdRemapBody() (err error) {
-	for _, msgId := range m.wsTypes.MsgIds {
-		strMsgIds := []string{msgId.Name, msgId.Value}
+	for _, msgId := range m.wsTypes.MsgIdMap {
+		strMsgIds := []string{msgId.Name, msgId.Value} // body声明msg_id时，可以是变量名或者时变量值
 		for _, strMsgId := range strMsgIds {
 			upBody, ok := m.wsTypes.UpMsgs.StrMsgIdMapBody[strMsgId]
 			if ok {
@@ -188,7 +194,7 @@ func NewUpDownMsgs() *UpDownMsgs {
 
 type WsTypes struct {
 	MsgIdType *source.TypeIdent
-	MsgIds    []*source.ParsedVal
+	MsgIdMap  map[string]*source.ParsedVal // str_val -> parsed_val
 
 	UpMsgs   *UpDownMsgs
 	DownMsgs *UpDownMsgs
@@ -196,7 +202,7 @@ type WsTypes struct {
 
 func NewWsTypes() *WsTypes {
 	return &WsTypes{
-		MsgIds:   []*source.ParsedVal{},
+		MsgIdMap: map[string]*source.ParsedVal{},
 		UpMsgs:   NewUpDownMsgs(),
 		DownMsgs: NewUpDownMsgs(),
 	}
@@ -205,7 +211,7 @@ func NewWsTypes() *WsTypes {
 func (m *WsTypes) Output() (output *WsTypesOutput) {
 	output = NewWsTypesOutput()
 
-	for _, msgId := range m.MsgIds {
+	for _, msgId := range m.MsgIdMap {
 		oMsgId := &WsMsgIdOutput{
 			Name:  msgId.Name,
 			Value: msgId.Value,
@@ -326,6 +332,6 @@ func (m *WsTypes) Output() (output *WsTypesOutput) {
 		output.DownMsgBodys = append(output.DownMsgBodys, oBody)
 	}
 
-	output.Sort()
+	output.SortOut()
 	return
 }

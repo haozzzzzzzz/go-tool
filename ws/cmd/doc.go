@@ -42,7 +42,7 @@ func DocCmd() (command *cobra.Command) {
 				return
 			}
 
-			err = doc.WriteDoc(parser.WsTypes, fileFormat, absOutputFilePath)
+			err = doc.WriteDoc(parser.WsTypes().Output(), fileFormat, absOutputFilePath)
 			if err != nil {
 				logrus.Errorf("write ws doc failed. file_format: %s, file_path: %s, error: %s", fileFormat, absOutputFilePath, err)
 				return
@@ -53,7 +53,7 @@ func DocCmd() (command *cobra.Command) {
 	}
 
 	flags := command.Flags()
-	flags.StringVarP(&rootDir, "rootDir", "d", "./", "source root dir")
+	flags.StringVarP(&rootDir, "root_dir", "d", "./", "source root dir")
 	flags.StringVarP(&fileFormat, "format", "f", "json", "doc file format")
 	flags.StringVarP(&outputFilePath, "output", "o", "./ws_doc.json", "doc output file path")
 	return

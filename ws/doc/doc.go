@@ -23,6 +23,7 @@ func WriteDoc(
 		logrus.Errorf("writer write doc failed. error: %s", err)
 		return
 	}
+
 	return
 }
 

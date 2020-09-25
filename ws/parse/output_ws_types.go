@@ -32,7 +32,9 @@ type WsMsgBodyOutput struct {
 // ws types output structure
 type WsTypesOutput struct {
 	SpecVersion    string               `json:"spec_version"`
-	MsgIds         []*WsMsgIdOutput     `json:"msg_ids" yaml:"msg_ids"`
+	MsgIds         []*WsMsgIdOutput     `json:"-" yaml:"-"`
+	UpMsgIds       []*WsMsgIdOutput     `json:"up_msg_ids" yaml:"up_msg_ids"`
+	DownMsgIds     []*WsMsgIdOutput     `json:"down_msg_ids" yaml:"down_msg_ids"`
 	UpMsgCommons   []*WsMsgCommonOutput `json:"up_msg_commons" yaml:"up_msg_commons"`
 	UpMsgBodys     []*WsMsgBodyOutput   `json:"up_msg_bodys" yaml:"up_msg_bodys"`
 	DownMsgCommons []*WsMsgCommonOutput `json:"down_msg_commons" yaml:"down_msg_commons"`
@@ -45,6 +47,8 @@ func NewWsTypesOutput() (output *WsTypesOutput) {
 	output = &WsTypesOutput{
 		SpecVersion:    LatestWsTypeOutputSpecVersion,
 		MsgIds:         []*WsMsgIdOutput{},
+		UpMsgIds:       []*WsMsgIdOutput{},
+		DownMsgIds:     []*WsMsgIdOutput{},
 		UpMsgCommons:   []*WsMsgCommonOutput{},
 		UpMsgBodys:     []*WsMsgBodyOutput{},
 		DownMsgCommons: []*WsMsgCommonOutput{},
@@ -53,7 +57,7 @@ func NewWsTypesOutput() (output *WsTypesOutput) {
 	return
 }
 
-func (m *WsTypesOutput) Sort() {
+func (m *WsTypesOutput) SortOut() {
 	// sort msg ids
 	msgIdMap := make(map[string]*WsMsgIdOutput)
 	strMsgIds := make([]string, 0)
@@ -78,16 +82,19 @@ func (m *WsTypesOutput) Sort() {
 	upMsgBodys := make([]*WsMsgBodyOutput, 0)
 	downMsgBodys := make([]*WsMsgBodyOutput, 0)
 	for _, strMsgId := range strMsgIds {
-		msgIds = append(msgIds, msgIdMap[strMsgId])
+		msgId := msgIdMap[strMsgId]
+		msgIds = append(msgIds, msgId)
 
 		upBody, ok := upMsgBodyMap[strMsgId]
 		if ok {
 			upMsgBodys = append(upMsgBodys, upBody)
+			m.UpMsgIds = append(m.UpMsgIds, msgId)
 		}
 
 		downBody, ok := downMsgBodyMap[strMsgId]
 		if ok {
 			downMsgBodys = append(downMsgBodys, downBody)
+			m.DownMsgIds = append(m.DownMsgIds, msgId)
 		}
 	}
 
