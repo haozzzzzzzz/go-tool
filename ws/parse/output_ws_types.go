@@ -11,17 +11,20 @@ import (
 type WsMsgIdOutput struct {
 	Name  string       `json:"name" yaml:"name"`
 	Value string       `json:"value" yaml:"value"`
+	Title string       `json:"title" yaml:"title"`
 	Doc   string       `json:"doc" yaml:"doc"`
 	IType source.IType `json:"itype" yaml:"itype"`
 }
 
 type WsMsgCommonOutput struct {
+	Title string       `json:"title" yaml:"title"`
 	Doc   string       `json:"doc" yaml:"doc"`
 	IType source.IType `json:"itype" yaml:"itype"`
 }
 
 type WsMsgBodyOutput struct {
 	MsgId string       `json:"msg_id" yaml:"msg_id"`
+	Title string       `json:"title" yaml:"title"`
 	Doc   string       `json:"doc" yaml:"doc"`
 	IType source.IType `json:"itype" yaml:"itype"`
 }

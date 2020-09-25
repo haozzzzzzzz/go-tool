@@ -206,6 +206,14 @@ func (m *WsTypes) Output() (output *WsTypesOutput) {
 	output = NewWsTypesOutput()
 
 	for _, msgId := range m.MsgIds {
+		oMsgId := &WsMsgIdOutput{
+			Name:  msgId.Name,
+			Value: msgId.Value,
+			Title: "",
+			Doc:   "",
+			IType: m.MsgIdType.IType,
+		}
+
 		docs := make([]string, 0)
 		if msgId.Doc != "" {
 			docs = append(docs, msgId.Doc)
@@ -215,40 +223,54 @@ func (m *WsTypes) Output() (output *WsTypesOutput) {
 			docs = append(docs, msgId.Comment)
 		}
 
-		doc := strings.Join(docs, "\n")
-		oMsgId := &WsMsgIdOutput{
-			Name:  msgId.Name,
-			Value: msgId.Value,
-			Doc:   doc,
-			IType: m.MsgIdType.IType,
+		if len(docs) > 0 {
+			oMsgId.Title = docs[0]
+			docs = docs[1:]
+			oMsgId.Doc = strings.Join(docs, "\n")
 		}
+
 		output.MsgIds = append(output.MsgIds, oMsgId)
 	}
 
 	for _, upCommon := range m.UpMsgs.Commons {
+		commonOut := &WsMsgCommonOutput{
+			Doc:   "",
+			Title: "",
+			IType: upCommon.TypeIdent.IType,
+		}
+
 		docs := upCommon.DocLines
 		if upCommon.Comment != "" {
 			docs = append(docs, upCommon.Comment)
 		}
+		if len(docs) > 0 {
+			commonOut.Title = docs[0]
+			docs = docs[1:]
+			commonOut.Doc = strings.Join(docs, "\n")
+		}
 
-		doc := strings.Join(docs, "\n")
-		output.UpMsgCommons = append(output.UpMsgCommons, &WsMsgCommonOutput{
-			Doc:   doc,
-			IType: upCommon.TypeIdent.IType,
-		})
+		output.UpMsgCommons = append(output.UpMsgCommons, commonOut)
 	}
 
 	for _, downCommon := range m.DownMsgs.Commons {
+		commonOut := &WsMsgCommonOutput{
+			Doc:   "",
+			Title: "",
+			IType: downCommon.TypeIdent.IType,
+		}
+
 		docs := downCommon.DocLines
 		if downCommon.Comment != "" {
 			docs = append(docs, downCommon.Comment)
 		}
 
-		doc := strings.Join(docs, "\n")
-		output.DownMsgCommons = append(output.DownMsgCommons, &WsMsgCommonOutput{
-			Doc:   doc,
-			IType: downCommon.TypeIdent.IType,
-		})
+		if len(docs) > 0 {
+			commonOut.Title = docs[0]
+			docs = docs[1:]
+			commonOut.Doc = strings.Join(docs, "\n")
+		}
+
+		output.DownMsgCommons = append(output.DownMsgCommons, commonOut)
 	}
 
 	for _, upBody := range m.UpMsgs.StrMsgIdMapBody {
@@ -256,16 +278,23 @@ func (m *WsTypes) Output() (output *WsTypesOutput) {
 			logrus.Warnf("can not find msg id declaration for msg body. msg_body: %s, msg_id: %s", upBody.TypeIdent.IType.TypeName(), upBody.StrMsgId)
 			continue
 		}
-		docs := upBody.DocLines
-		if upBody.Comment != "" {
-			docs = append(docs, upBody.Comment)
-		}
-		doc := strings.Join(docs, "\n")
 
 		oBody := &WsMsgBodyOutput{
 			MsgId: upBody.MsgId.Value,
 			IType: upBody.TypeIdent.IType,
-			Doc:   doc,
+			Doc:   "",
+			Title: "",
+		}
+
+		docs := upBody.DocLines
+		if upBody.Comment != "" {
+			docs = append(docs, upBody.Comment)
+		}
+
+		if len(docs) > 0 {
+			oBody.Title = docs[0]
+			docs = docs[1:]
+			oBody.Doc = strings.Join(docs, "\n")
 		}
 
 		output.UpMsgBodys = append(output.UpMsgBodys, oBody)
@@ -277,17 +306,23 @@ func (m *WsTypes) Output() (output *WsTypesOutput) {
 			continue
 		}
 
+		oBody := &WsMsgBodyOutput{
+			MsgId: downBody.MsgId.Value,
+			IType: downBody.TypeIdent.IType,
+			Doc:   "",
+			Title: "",
+		}
+
 		docs := downBody.DocLines
 		if downBody.Comment != "" {
 			docs = append(docs, downBody.Comment)
 		}
-		doc := strings.Join(docs, "\n")
-
-		oBody := &WsMsgBodyOutput{
-			MsgId: downBody.MsgId.Value,
-			IType: downBody.TypeIdent.IType,
-			Doc:   doc,
+		if len(docs) > 0 {
+			oBody.Title = docs[0]
+			docs = docs[1:]
+			oBody.Doc = strings.Join(docs, "\n")
 		}
+
 		output.DownMsgBodys = append(output.DownMsgBodys, oBody)
 	}
 

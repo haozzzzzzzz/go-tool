@@ -22,4 +22,8 @@ func TestWsTypesParser_ParseWsTypes(t *testing.T) {
 	_ = bObj
 
 	fmt.Println(string(bObj))
+
+	//a := []string{"1", "2"}
+	//a = a[1:]
+	//fmt.Println(a)
 }
