@@ -148,31 +148,31 @@ func Parse(
 	return
 }
 
-// 类型解析器
-var iTypeMap = map[types.Type]IType{}
+var ITypeMap = map[types.Type]IType{} // 防止重复解析；防止内部循环引用时，一直无法停止
 
+// 类型解析器
 func ParseType(
 	info *types.Info,
 	t types.Type,
 ) (iType IType) {
-	var ok bool
-	iType, ok = iTypeMap[t]
+	iType, ok := ITypeMap[t]
 	if ok {
 		return
 	}
 
-	iType = NewBasicType("Unsupported")
-
 	switch t.(type) {
 	case *types.Basic:
 		iType = NewBasicType(t.(*types.Basic).Name())
+		ITypeMap[t] = iType
 
 	case *types.Pointer:
 		iType = ParseType(info, t.(*types.Pointer).Elem())
+		ITypeMap[t] = iType
 
 	case *types.Named:
 		tNamed := t.(*types.Named)
 		iType = ParseType(info, tNamed.Underlying())
+		ITypeMap[t] = iType
 
 		// 如果是structType
 		structType, ok := iType.(*StructType)
@@ -183,6 +183,8 @@ func ParseType(
 
 	case *types.Struct:
 		structType := NewStructType()
+		iType = structType
+		ITypeMap[t] = iType
 
 		tStructType := t.(*types.Struct)
 
@@ -279,23 +281,29 @@ func ParseType(
 
 		}
 
-		iType = structType
-
 	case *types.Slice:
 		arrType := NewArrayType()
+		iType = arrType
+		ITypeMap[t] = iType
+
 		typeSlice := t.(*types.Slice)
+
+		// 内部可能发生循环引用，所以将递归放到最后, 保证第一遍递归的时候上层类信息尽量全
 		eltType := ParseType(info, typeSlice.Elem())
 		arrType.EltSpec = eltType
 		arrType.EltName = eltType.TypeName()
 		arrType.Name = fmt.Sprintf("[]%s", eltType.TypeName())
 
-		iType = arrType
-
 	case *types.Array:
 		arrType := NewArrayType()
+		iType = arrType
+		ITypeMap[t] = iType
+
 		typeArr := t.(*types.Array)
-		eltType := ParseType(info, typeArr.Elem())
 		arrType.Len = typeArr.Len()
+
+		// 内部可能发生循环引用，所以将递归放到最后, 保证第一遍递归的时候上层类信息尽量全
+		eltType := ParseType(info, typeArr.Elem())
 		arrType.EltSpec = eltType
 		arrType.EltName = eltType.TypeName()
 		if arrType.Len > 0 {
@@ -304,21 +312,24 @@ func ParseType(
 			arrType.Name = fmt.Sprintf("[]%s", eltType.TypeName())
 		}
 
-		iType = arrType
-
 	case *types.Map:
 		mapType := NewMapType()
+		iType = mapType
+		ITypeMap[t] = iType
+
 		tMap := t.(*types.Map)
+
+		// 内部可能发生循环引用，所以将递归放到最后, 保证第一遍递归的时候上层类信息尽量全
 		mapType.ValueSpec = ParseType(info, tMap.Elem())
 		mapType.KeySpec = ParseType(info, tMap.Key())
 		mapType.Name = fmt.Sprintf("map[%s]%s", mapType.KeySpec.TypeName(), mapType.ValueSpec.TypeName())
 
-		iType = mapType
-
 	case *types.Interface:
 		iType = NewInterfaceType()
+		ITypeMap[t] = iType
 
 	default:
+		iType = NewBasicType("Unsupported")
 		logrus.Warnf("parse unsupported type %#v", t)
 
 	}
