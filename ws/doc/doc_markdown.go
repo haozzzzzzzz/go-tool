@@ -40,6 +40,8 @@ func NewWsTypesMdWriter(wsTypes *parse.WsTypesOutput) *WsTypesMdWriter {
 }
 
 func (m *WsTypesMdWriter) Parse() {
+	m.WriteMsgIds("Up Msg Ids", m.wsTypes.UpMsgIdValues, m.wsTypes.UpMsgIdMap)
+	m.WriteMsgIds("Down Msg Ids", m.wsTypes.DownMsgIdValues, m.wsTypes.DownMsgIdMap)
 	m.WriteUpMsg()
 	m.WriteDownMsg()
 }
@@ -53,15 +55,13 @@ func (m *WsTypesMdWriter) Save(filename string) (err error) {
 }
 
 func (m *WsTypesMdWriter) WriteUpMsg() {
-	m.WriteMsgIds("Up Msg Ids", m.wsTypes.UpMsgIdValues, m.wsTypes.UpMsgIdMap)
 	m.WriteCommon("Up Msg Common Params", m.wsTypes.UpMsgCommons)
 	m.WriteBody("Up Msg Bodies", m.wsTypes.UpMsgBodys)
 }
 
 func (m *WsTypesMdWriter) WriteDownMsg() {
-	m.WriteMsgIds("Down Msg Ids", m.wsTypes.DownMsgIdValues, m.wsTypes.DownMsgIdMap)
 	m.WriteCommon("Down Msg Common Params", m.wsTypes.UpMsgCommons)
-	m.WriteBody("Up Msg Bodies", m.wsTypes.DownMsgBodys)
+	m.WriteBody("Down Msg Bodies", m.wsTypes.DownMsgBodys)
 }
 
 func (m *WsTypesMdWriter) WriteMsgIds(title string, msgIdValues []string, msgIdMap map[string]*parse.WsMsgIdOutput) {
