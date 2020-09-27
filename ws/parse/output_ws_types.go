@@ -107,6 +107,41 @@ func (m *WsTypesOutput) SortOut() {
 	m.MsgIds = msgIds
 	m.UpMsgBodys = upMsgBodys
 	m.DownMsgBodys = downMsgBodys
+
+	// commons
+	upMsgCommons := make([]*WsMsgCommonOutput, 0)
+	upMsgCommonMap := make(map[string]*WsMsgCommonOutput)
+	upMsgCommonNames := make([]string, 0)
+
+	downMsgCommons := make([]*WsMsgCommonOutput, 0)
+	downMsgCommonMap := make(map[string]*WsMsgCommonOutput)
+	downMsgCommonNames := make([]string, 0)
+
+	for _, common := range m.UpMsgCommons {
+		typeName := common.IType.TypeName()
+		upMsgCommonMap[typeName] = common
+		upMsgCommonNames = append(upMsgCommonNames, typeName)
+	}
+
+	for _, common := range m.DownMsgCommons {
+		typeName := common.IType.TypeName()
+		downMsgCommonMap[typeName] = common
+		downMsgCommonNames = append(downMsgCommonNames, typeName)
+	}
+
+	sort.Strings(upMsgCommonNames)
+	sort.Strings(downMsgCommonNames)
+
+	for _, typeName := range upMsgCommonNames {
+		upMsgCommons = append(upMsgCommons, upMsgCommonMap[typeName])
+	}
+
+	for _, typeName := range downMsgCommonNames {
+		downMsgCommons = append(downMsgCommons, downMsgCommonMap[typeName])
+	}
+
+	m.UpMsgCommons = upMsgCommons
+	m.DownMsgCommons = downMsgCommons
 }
 
 func (m *WsTypesOutput) Json() (bObj []byte, err error) {

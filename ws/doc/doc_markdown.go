@@ -14,7 +14,7 @@ func init() {
 
 func WriteDocMd(
 	wsTypes *parse.WsTypesOutput,
-	format string,
+	format string, // 格式
 	filepath string,
 ) (err error) {
 	mdWriter := NewWsTypesMdWriter(wsTypes)
@@ -55,11 +55,13 @@ func (m *WsTypesMdWriter) Save(filename string) (err error) {
 func (m *WsTypesMdWriter) WriteUpMsg() {
 	m.WriteMsgIds("Up Msg Ids", m.wsTypes.UpMsgIdValues, m.wsTypes.UpMsgIdMap)
 	m.WriteCommon("Up Msg Common Params", m.wsTypes.UpMsgCommons)
+	m.WriteBody("Up Msg Bodies", m.wsTypes.UpMsgBodys)
 }
 
 func (m *WsTypesMdWriter) WriteDownMsg() {
 	m.WriteMsgIds("Down Msg Ids", m.wsTypes.DownMsgIdValues, m.wsTypes.DownMsgIdMap)
 	m.WriteCommon("Down Msg Common Params", m.wsTypes.UpMsgCommons)
+	m.WriteBody("Up Msg Bodies", m.wsTypes.DownMsgBodys)
 }
 
 func (m *WsTypesMdWriter) WriteMsgIds(title string, msgIdValues []string, msgIdMap map[string]*parse.WsMsgIdOutput) {
@@ -102,14 +104,23 @@ func (m *WsTypesMdWriter) WriteCommon(title string, commonOutputs []*parse.WsMsg
 
 	m.mdWriter.WriteH3(title)
 	for _, commonOutput := range commonOutputs {
-		m.mdWriter.WriteH4(commonOutput.Title)
-		m.mdWriter.WriteText(commonOutput.Doc)
+		m.mdWriter.WriteH4(fmt.Sprintf("%s %s", commonOutput.IType.TypeName(), commonOutput.Title))
+		m.mdWriter.WriteTextLn(commonOutput.Doc)
 		m.writeType(commonOutput.IType)
 	}
 }
 
-func (m *WsTypesMdWriter) WriteBody() {
-	// TODO
+func (m *WsTypesMdWriter) WriteBody(title string, bodyOutputs []*parse.WsMsgBodyOutput) {
+	if len(bodyOutputs) == 0 {
+		return
+	}
+
+	m.mdWriter.WriteH3(title)
+	for _, bodyOutput := range bodyOutputs {
+		m.mdWriter.WriteH4(fmt.Sprintf("[ %s ] %s %s", bodyOutput.MsgId, bodyOutput.IType.TypeName(), bodyOutput.Title))
+		m.mdWriter.WriteTextLn(bodyOutput.Doc)
+		m.writeType(bodyOutput.IType)
+	}
 }
 
 func (m *WsTypesMdWriter) writeType(iType source.IType) {

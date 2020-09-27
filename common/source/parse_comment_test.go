@@ -6,7 +6,7 @@ import (
 )
 
 func TestNewCommentText(t *testing.T) {
-	strCommentText1 := `/***Comment Tittle
+	strCommentText1 := `/***Description Tittle
 *@ws_doc_up_common
 ********line 1
 * @ws_doc_down_common
