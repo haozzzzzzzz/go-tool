@@ -63,6 +63,6 @@ func DocCmd() (command *cobra.Command) {
 	flags := command.Flags()
 	flags.StringVarP(&rootDir, "root_dir", "d", "./", "source root dir")
 	flags.StringVarP(&fileFormat, "format", "f", "json", "doc file format")
-	flags.StringVarP(&outputFilePath, "output", "o", "./ws_doc.json", "doc output file path")
+	flags.StringVarP(&outputFilePath, "output", "o", "./ws_doc", "doc output file path")
 	return
 }

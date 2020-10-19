@@ -8,8 +8,11 @@ build_time=`date +"%Y-%m-%d %H:%M:%S %Z"`
 #echo $build_time
 go build -ldflags="-X 'main.BuildTime=${build_time}'" -o api ../../api/main.go
 
+# ws doc tool
+go build -ldflags="-X 'main.BuildTime=${build_time}'" -o ws ../../ws/main.go
+
 # code tool
-go build -o code ../../code/main.go
+#go build -o code ../../code/main.go
 
 ## log formatter
 #go build -o logfmt ${GOPATH}/src/github.com/haozzzzzzzz/go-rapid-development/tools/logfmt/main.go
