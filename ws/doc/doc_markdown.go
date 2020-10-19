@@ -39,10 +39,17 @@ func NewWsTypesMdWriter(wsTypes *parse.WsTypesOutput) *WsTypesMdWriter {
 	}
 }
 
+func (m *WsTypesMdWriter) WriteSectionEmpty() {
+	m.mdWriter.WriteTextLn("\n\n\n\n\n")
+}
+
 func (m *WsTypesMdWriter) Parse() {
 	m.WriteMsgIds("Up Msg Ids", m.wsTypes.UpMsgIdValues, m.wsTypes.UpMsgIdMap)
+	m.WriteSectionEmpty()
 	m.WriteMsgIds("Down Msg Ids", m.wsTypes.DownMsgIdValues, m.wsTypes.DownMsgIdMap)
+	m.WriteSectionEmpty()
 	m.WriteUpMsg()
+	m.WriteSectionEmpty()
 	m.WriteDownMsg()
 }
 
@@ -56,11 +63,13 @@ func (m *WsTypesMdWriter) Save(filename string) (err error) {
 
 func (m *WsTypesMdWriter) WriteUpMsg() {
 	m.WriteCommon("Up Msg Common Params", m.wsTypes.UpMsgCommons)
+	m.WriteSectionEmpty()
 	m.WriteBody("Up Msg Bodies", m.wsTypes.UpMsgBodys)
 }
 
 func (m *WsTypesMdWriter) WriteDownMsg() {
 	m.WriteCommon("Down Msg Common Params", m.wsTypes.UpMsgCommons)
+	m.WriteSectionEmpty()
 	m.WriteBody("Down Msg Bodies", m.wsTypes.DownMsgBodys)
 }
 
