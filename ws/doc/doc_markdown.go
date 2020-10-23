@@ -12,6 +12,8 @@ func init() {
 	BindFileFormatWriter([]string{"md"}, WriteDocMd)
 }
 
+const TOCMaxLevel = 4
+
 func WriteDocMd(
 	wsTypes *parse.WsTypesOutput,
 	format string, // 格式
@@ -35,7 +37,7 @@ type WsTypesMdWriter struct {
 func NewWsTypesMdWriter(wsTypes *parse.WsTypesOutput) *WsTypesMdWriter {
 	return &WsTypesMdWriter{
 		wsTypes:  wsTypes,
-		mdWriter: markdown.NewWorkBook(),
+		mdWriter: markdown.NewWorkBook(TOCMaxLevel),
 	}
 }
 
@@ -44,9 +46,9 @@ func (m *WsTypesMdWriter) WriteSectionSeperate() {
 }
 
 func (m *WsTypesMdWriter) Parse() {
-	m.WriteMsgIds("Up Msg Ids", m.wsTypes.UpMsgIdValues, m.wsTypes.UpMsgIdMap)
+	m.WriteMsgIds("上行消息ID列表", m.wsTypes.UpMsgIdValues, m.wsTypes.UpMsgIdMap)
 	m.WriteSectionSeperate()
-	m.WriteMsgIds("Down Msg Ids", m.wsTypes.DownMsgIdValues, m.wsTypes.DownMsgIdMap)
+	m.WriteMsgIds("下行消息ID列表", m.wsTypes.DownMsgIdValues, m.wsTypes.DownMsgIdMap)
 	m.WriteSectionSeperate()
 	m.WriteUpMsg()
 	m.WriteSectionSeperate()
@@ -62,15 +64,15 @@ func (m *WsTypesMdWriter) Save(filename string) (err error) {
 }
 
 func (m *WsTypesMdWriter) WriteUpMsg() {
-	m.WriteCommon("Up Msg Common Params", m.wsTypes.UpMsgCommons)
+	m.WriteCommon("上行消息公参", m.wsTypes.UpMsgCommons)
 	m.WriteSectionSeperate()
-	m.WriteBody("Up Msg Bodies", m.wsTypes.UpMsgBodys)
+	m.WriteBody("上行消息负载", m.wsTypes.UpMsgBodys)
 }
 
 func (m *WsTypesMdWriter) WriteDownMsg() {
-	m.WriteCommon("Down Msg Common Params", m.wsTypes.UpMsgCommons)
+	m.WriteCommon("下行消息公参", m.wsTypes.UpMsgCommons)
 	m.WriteSectionSeperate()
-	m.WriteBody("Down Msg Bodies", m.wsTypes.DownMsgBodys)
+	m.WriteBody("下行消息负载", m.wsTypes.DownMsgBodys)
 }
 
 func (m *WsTypesMdWriter) WriteMsgIds(title string, msgIdValues []string, msgIdMap map[string]*parse.WsMsgIdOutput) {
@@ -81,7 +83,7 @@ func (m *WsTypesMdWriter) WriteMsgIds(title string, msgIdValues []string, msgIdM
 	m.mdWriter.WriteH3(title)
 	msgIdTable := &markdown.Table{
 		Headers: []string{
-			"key", "value", "type", "title", "description",
+			"value", "key", "type", "title", "description",
 		},
 		Rows: [][]string{},
 	}
@@ -94,8 +96,8 @@ func (m *WsTypesMdWriter) WriteMsgIds(title string, msgIdValues []string, msgIdM
 		}
 
 		row := []string{
-			msgId.Name,
 			msgId.Value,
+			msgId.Name,
 			msgId.IType.TypeName(),
 			msgId.Title,
 			msgId.Doc,
@@ -126,14 +128,14 @@ func (m *WsTypesMdWriter) WriteBody(title string, bodyOutputs []*parse.WsMsgBody
 
 	m.mdWriter.WriteH3(title)
 	for _, bodyOutput := range bodyOutputs {
-		m.mdWriter.WriteH4(fmt.Sprintf("[ %s ] %s %s", bodyOutput.MsgId, bodyOutput.IType.TypeName(), bodyOutput.Title))
+		m.mdWriter.WriteH4(fmt.Sprintf("[%s] %s %s", bodyOutput.MsgId, bodyOutput.IType.TypeName(), bodyOutput.Title))
 		m.mdWriter.WriteTextLn(bodyOutput.Doc)
 		m.writeType(bodyOutput.IType)
 	}
 }
 
 func (m *WsTypesMdWriter) writeType(iType source.IType) {
-	strTree := source.TypeTree(iType, "    ", 10)
+	strTree := source.TypeTree(iType, "\t", 10)
 	if strTree == "" {
 		return
 	}

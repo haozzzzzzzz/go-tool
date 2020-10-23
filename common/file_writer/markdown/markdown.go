@@ -10,20 +10,35 @@ import (
 )
 
 type WorkBook struct {
-	Buf *bytes.Buffer
+	TOC *TOC
+	buf *bytes.Buffer
 }
 
-func NewWorkBook() *WorkBook {
+func NewWorkBook(
+	tocMaxLevel int,
+) *WorkBook {
 	return &WorkBook{
-		Buf: bytes.NewBuffer(nil),
+		buf: bytes.NewBuffer(nil),
+		TOC: NewTOC(tocMaxLevel),
 	}
 }
 
 // headline
 func (m *WorkBook) WriteHeadline(level int, text string) {
+	anchor := text
+	anchor = strings.ReplaceAll(anchor, " ", "-")
+	anchor = strings.ReplaceAll(anchor, "[", "")
+	anchor = strings.ReplaceAll(anchor, "]", "")
+	anchor = strings.ToLower(anchor)
+	m.TOC.Push(&TOCNode{
+		Level:  level,
+		Text:   text,
+		Anchor: "#" + anchor,
+	})
+
 	strLevel := strings.Repeat("#", level)
 	text = fmt.Sprintf("%s %s\n", strLevel, text)
-	m.Buf.WriteString(text)
+	m.buf.WriteString(text)
 }
 
 func (m *WorkBook) WriteH1(text string) {
@@ -45,34 +60,40 @@ func (m *WorkBook) WriteH4(text string) {
 // text
 func (m *WorkBook) WriteText(texts ...string) {
 	for _, text := range texts {
-		m.Buf.WriteString(text)
+		m.buf.WriteString(text)
 	}
 }
 
 func (m *WorkBook) WriteTextLn(texts ...string) {
 	m.WriteText(texts...)
-	m.Buf.WriteString("\n")
+	m.buf.WriteString("\n")
 }
 
 // table
 func (m *WorkBook) WriteTable(table *Table) {
-	m.Buf.WriteString(table.String())
+	m.buf.WriteString(table.String())
 }
 
 // string
 func (m *WorkBook) String() (str string) {
-	str = m.Buf.String()
+	toc := m.TOC.String()
+	if toc != "" {
+		str += strings.Repeat("#", m.TOC.RootLevel) + " 目录\n"
+		str += toc + "\n"
+	}
+
+	str += m.buf.String()
 	return
 }
 
 // bytes
 func (m *WorkBook) Bytes() []byte {
-	return m.Buf.Bytes()
+	return m.buf.Bytes()
 }
 
 // Save 保存markdown
 func (m *WorkBook) Save(filename string) (err error) {
-	err = ioutil.WriteFile(filename, m.Buf.Bytes(), os.FileMode(0666))
+	err = ioutil.WriteFile(filename, []byte(m.String()), os.FileMode(0666))
 	if err != nil {
 		logrus.Errorf("write markdown workbook failed. error: %s", err)
 		return
@@ -99,5 +120,44 @@ func (m *Table) String() (str string) {
 	}
 
 	str = strHead + strSplit + strBody
+	return
+}
+
+// 文档目录
+type TOC struct {
+	MaxLevel  int
+	nodes     []*TOCNode
+	RootLevel int // 顶层的level
+}
+
+type TOCNode struct {
+	Level  int // 大于0
+	Text   string
+	Anchor string
+}
+
+func NewTOC(maxLevel int) *TOC {
+	return &TOC{
+		MaxLevel: maxLevel,
+		nodes:    make([]*TOCNode, 0),
+	}
+}
+
+func (m *TOC) Push(node *TOCNode) {
+	if node.Level < 1 {
+		return
+	}
+
+	m.nodes = append(m.nodes, node)
+	if node.Level < m.RootLevel || m.RootLevel == 0 {
+		m.RootLevel = node.Level
+	}
+}
+
+func (m *TOC) String() (str string) {
+	for _, node := range m.nodes {
+		indentNum := node.Level - m.RootLevel
+		str += fmt.Sprintf("%s- [%s](%s)\n", strings.Repeat("\t", indentNum), node.Text, node.Anchor)
+	}
 	return
 }
