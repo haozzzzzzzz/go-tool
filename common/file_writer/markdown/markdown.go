@@ -6,29 +6,46 @@ import (
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 )
 
 type WorkBook struct {
-	TOC *TOC
-	buf *bytes.Buffer
+	TOC            *TOC
+	buf            *bytes.Buffer
+	anchorCountMap map[string]int
 }
 
 func NewWorkBook(
 	tocMaxLevel int,
 ) *WorkBook {
 	return &WorkBook{
-		buf: bytes.NewBuffer(nil),
-		TOC: NewTOC(tocMaxLevel),
+		buf:            bytes.NewBuffer(nil),
+		TOC:            NewTOC(tocMaxLevel),
+		anchorCountMap: map[string]int{},
 	}
 }
 
 // headline
 func (m *WorkBook) WriteHeadline(level int, text string) {
 	anchor := text
-	anchor = strings.ReplaceAll(anchor, " ", "-")
-	anchor = strings.ReplaceAll(anchor, "[", "")
-	anchor = strings.ReplaceAll(anchor, "]", "")
+	replacedExpr, err := regexp.Compile(`(?i:[^\s\w\p{Han}])`) // 汉语 chinese
+	if err != nil {
+		logrus.Errorf("compile replace anchor char reg expr failed. error: %s", err)
+
+	} else {
+		anchor = replacedExpr.ReplaceAllString(anchor, "")
+		anchor = strings.ReplaceAll(anchor, " ", "-")
+
+	}
+
+	counter := m.anchorCountMap[anchor]
+	counter++
+	m.anchorCountMap[anchor] = counter
+	if counter > 1 {
+		anchor = fmt.Sprintf("%s-%d", anchor, counter)
+	}
+
 	anchor = strings.ToLower(anchor)
 	m.TOC.Push(&TOCNode{
 		Level:  level,
