@@ -2,31 +2,176 @@ package source
 
 import (
 	"fmt"
+	"github.com/haozzzzzzzz/go-tool/common/source/mod"
 	"github.com/sirupsen/logrus"
 	"go/ast"
 	"go/types"
 	"golang.org/x/tools/go/packages"
+	"path/filepath"
 	"strings"
 )
 
 type ParsedType struct {
-	TypesInfo *types.Info
-	TypeName  *types.TypeName
-	Doc       string
-	Comment   string
-}
-
-type ParsedVal struct {
-	TypeInfo *types.Info
-	Type     types.Type
-	Name     string
-	Value    string
+	TypeName *types.TypeName
 	Doc      string
 	Comment  string
 }
 
+type ParsedVal struct {
+	Type    types.Type
+	Name    string
+	Value   string
+	Doc     string
+	Comment string
+}
+
 func Parse(
 	dir string,
+) (
+	mergedTypesInfo *types.Info,
+	parsedTypes []*ParsedType,
+	parsedVals []*ParsedVal,
+	err error,
+) {
+	parsedTypes = make([]*ParsedType, 0)
+	parsedVals = make([]*ParsedVal, 0)
+
+	// 查询项目go mod
+	_, goModName, goModDir := mod.FindGoMod(dir)
+	_ = goModName
+
+	mode := packages.NeedName |
+		packages.NeedFiles |
+		packages.NeedCompiledGoFiles |
+		packages.NeedImports |
+		packages.NeedDeps |
+		packages.NeedExportsFile |
+		packages.NeedTypes |
+		packages.NeedSyntax |
+		packages.NeedTypesInfo |
+		packages.NeedTypesSizes
+
+	scanDir := dir
+	if goModDir != "" {
+		scanDir = goModDir
+	}
+
+	pkgs, err := packages.Load(&packages.Config{
+		Mode: mode,
+		Dir:  scanDir,
+	})
+
+	if err != nil {
+		logrus.Errorf("packages load failed. error: %s", err)
+		return
+	}
+
+	pkgMap := make(map[string]*packages.Package)
+	for _, pkg := range pkgs {
+		pkgMap[pkg.ID] = pkg
+		importPkgMap := importPackages(pkg)
+		for iPkgId, iPkg := range importPkgMap {
+			pkgMap[iPkgId] = iPkg
+		}
+	}
+
+	parsePkgs := make([]*packages.Package, 0)
+	mergedTypesInfo = &types.Info{
+		Scopes:     make(map[ast.Node]*types.Scope),
+		Defs:       make(map[*ast.Ident]types.Object),
+		Uses:       make(map[*ast.Ident]types.Object),
+		Types:      make(map[ast.Expr]types.TypeAndValue),
+		Implicits:  make(map[ast.Node]types.Object),
+		Selections: make(map[*ast.SelectorExpr]*types.Selection),
+		InitOrder:  make([]*types.Initializer, 0),
+	}
+
+	for pkgName, pkg := range pkgMap {
+		MergeTypesInfos(mergedTypesInfo, pkg.TypesInfo)
+
+		// 只解析指定目录下的类型
+		if len(pkg.GoFiles) == 0 {
+			continue
+		}
+
+		_ = pkgName
+		goFileDir := filepath.Dir(pkg.GoFiles[0])
+		if strings.Contains(goFileDir, dir) {
+			parsePkgs = append(parsePkgs, pkg)
+		}
+	}
+
+	for _, pkg := range parsePkgs {
+		fmt.Printf("Parsing package %s\n", pkg.ID)
+
+		pkgTypes, pkgVals, errParse := ParsePackage(pkg)
+		err = errParse
+		if err != nil {
+			logrus.Errorf("parse package failed. pkg: %s, error: %s", pkg.ID, err)
+			return
+		}
+
+		parsedTypes = append(parsedTypes, pkgTypes...)
+		parsedVals = append(parsedVals, pkgVals...)
+
+	}
+
+	return
+}
+
+func importPackages(
+	pkg *packages.Package,
+) (pkgMap map[string]*packages.Package) {
+	pkgMap = make(map[string]*packages.Package)
+	if len(pkg.Imports) == 0 {
+		return
+	}
+
+	for _, importPkg := range pkg.Imports {
+		pkgMap[importPkg.ID] = importPkg
+		nextLevelPkgMap := importPackages(importPkg)
+		for _, nPkg := range nextLevelPkgMap {
+			pkgMap[nPkg.ID] = nPkg
+		}
+	}
+
+	return
+}
+
+func MergeTypesInfos(info *types.Info, infos ...*types.Info) {
+	for _, tempInfo := range infos {
+		for tKey, tVal := range tempInfo.Types {
+			info.Types[tKey] = tVal
+		}
+
+		for defKey, defVal := range tempInfo.Defs {
+			info.Defs[defKey] = defVal
+		}
+
+		for useKey, useVal := range tempInfo.Uses {
+			info.Uses[useKey] = useVal
+		}
+
+		for implKey, implVal := range tempInfo.Implicits {
+			info.Implicits[implKey] = implVal
+		}
+
+		for selKey, selVal := range tempInfo.Selections {
+			info.Selections[selKey] = selVal
+		}
+
+		for scopeKey, scopeVal := range tempInfo.Scopes {
+			info.Scopes[scopeKey] = scopeVal
+		}
+
+		// do not need to merge InitOrder
+	}
+	return
+}
+
+// 从一个包里解析类型
+func ParsePackage(
+	pkg *packages.Package,
 ) (
 	parsedTypes []*ParsedType,
 	parsedVals []*ParsedVal,
@@ -35,111 +180,79 @@ func Parse(
 	parsedTypes = make([]*ParsedType, 0)
 	parsedVals = make([]*ParsedVal, 0)
 
-	mode := packages.NeedImports |
-		packages.NeedDeps |
-		packages.NeedSyntax |
-		packages.NeedTypesInfo |
-		packages.NeedTypes |
-		packages.NeedTypesSizes
-	//mode := packages.NeedName |
-	//	packages.NeedFiles |
-	//	packages.NeedCompiledGoFiles |
-	//	packages.NeedImports |
-	//	packages.NeedDeps |
-	//	packages.NeedExportsFile |
-	//	packages.NeedTypes |
-	//	packages.NeedSyntax |
-	//	packages.NeedTypesInfo |
-	//	packages.NeedTypesSizes
-	pkgs, err := packages.Load(&packages.Config{
-		Mode: mode,
-		Dir:  dir,
-	})
-	if err != nil {
-		logrus.Errorf("packages load failed. error: %s", err)
-		return
+	astFiles := pkg.Syntax
+	typesInfo := pkg.TypesInfo
+
+	// 节点映射
+	// 用于查找语法和注释
+	specMapGenDecl := make(map[ast.Spec]*ast.GenDecl)
+	for _, astFile := range astFiles {
+		for _, decl := range astFile.Decls {
+			genDecl, ok := decl.(*ast.GenDecl)
+			if !ok {
+				continue
+			}
+
+			for _, spec := range genDecl.Specs {
+				specMapGenDecl[spec] = genDecl
+			}
+		}
 	}
 
-	for _, pkg := range pkgs {
-		if pkg.TypesInfo == nil {
-			logrus.Warnf("pkg has nil TypesInfo obj. name: %s", pkg.Name)
-			continue
-		}
-
-		// 节点映射
-		// 用于查找语法和注释
-		specMapGenDecl := make(map[ast.Spec]*ast.GenDecl)
-		for _, astFile := range pkg.Syntax {
-			for _, decl := range astFile.Decls {
-				genDecl, ok := decl.(*ast.GenDecl)
-				if !ok {
-					continue
-				}
-
-				for _, spec := range genDecl.Specs {
-					specMapGenDecl[spec] = genDecl
-				}
-			}
-		}
-
-		// type definition
-		for ident, def := range pkg.TypesInfo.Defs {
-			switch defType := def.(type) {
-			case *types.TypeName:
-				spec, ok := ident.Obj.Decl.(*ast.TypeSpec)
-				if !ok {
-					logrus.Warnf("convert types.TypeName decl to *ast.TypeSpec not ok")
-					break
-				}
-
-				typeDecl, ok := specMapGenDecl[spec]
-				if !ok || typeDecl == nil {
-					logrus.Warnf("type spec can not find type decl. name: %s", ident.Obj.Name)
-					break
-				}
-
-				parsedTypes = append(parsedTypes, &ParsedType{
-					TypesInfo: pkg.TypesInfo,
-					TypeName:  defType,
-					Doc:       strings.TrimSpace(typeDecl.Doc.Text()),
-					Comment:   strings.TrimSpace(spec.Comment.Text()),
-				})
-
-			case *types.Const, *types.Var:
-				spec, ok := ident.Obj.Decl.(*ast.ValueSpec)
-				if !ok || spec == nil {
-					break
-				}
-
-				varDecl, ok := specMapGenDecl[spec]
-				if !ok || varDecl == nil {
-					logrus.Warnf("value spec can not find decl. name: %s", ident.Obj.Name)
-					break
-				}
-
-				val := ""
-				if len(spec.Values) >= 1 {
-					baseLit, ok := spec.Values[0].(*ast.BasicLit)
-					if ok {
-						val = baseLit.Value
-					}
-				}
-
-				parsedVal := &ParsedVal{
-					TypeInfo: pkg.TypesInfo,
-					Type:     defType.Type(),
-					Name:     defType.Name(),
-					Value:    val,
-					Doc:      strings.TrimSpace(varDecl.Doc.Text()), // TODO 目前还不能解析代码末尾的注释
-					Comment:  strings.TrimSpace(spec.Comment.Text()),
-				}
-
-				parsedVals = append(parsedVals, parsedVal)
-
-			default:
+	// type definition
+	for ident, def := range typesInfo.Defs {
+		switch defType := def.(type) {
+		case *types.TypeName:
+			spec, ok := ident.Obj.Decl.(*ast.TypeSpec)
+			if !ok {
+				logrus.Warnf("convert types.TypeName decl to *ast.TypeSpec not ok")
 				break
-
 			}
+
+			typeDecl, ok := specMapGenDecl[spec]
+			if !ok || typeDecl == nil {
+				logrus.Warnf("type spec can not find type decl. name: %s", ident.Obj.Name)
+				break
+			}
+
+			parsedTypes = append(parsedTypes, &ParsedType{
+				TypeName: defType,
+				Doc:      strings.TrimSpace(typeDecl.Doc.Text()),
+				Comment:  strings.TrimSpace(spec.Comment.Text()),
+			})
+
+		case *types.Const, *types.Var:
+			spec, ok := ident.Obj.Decl.(*ast.ValueSpec)
+			if !ok || spec == nil {
+				break
+			}
+
+			varDecl, ok := specMapGenDecl[spec]
+			if !ok || varDecl == nil {
+				logrus.Warnf("value spec can not find decl. name: %s", ident.Obj.Name)
+				break
+			}
+
+			val := ""
+			if len(spec.Values) >= 1 {
+				baseLit, ok := spec.Values[0].(*ast.BasicLit)
+				if ok {
+					val = baseLit.Value
+				}
+			}
+
+			parsedVal := &ParsedVal{
+				Type:    defType.Type(),
+				Name:    defType.Name(),
+				Value:   val,
+				Doc:     strings.TrimSpace(varDecl.Doc.Text()), // TODO 目前还不能解析代码末尾的注释
+				Comment: strings.TrimSpace(spec.Comment.Text()),
+			}
+
+			parsedVals = append(parsedVals, parsedVal)
+
+		default:
+			break
 
 		}
 
@@ -156,7 +269,7 @@ func ParseType(
 	t types.Type,
 ) (iType IType) {
 	iType, ok := ITypeMap[t]
-	if ok {
+	if ok { // 如果类型解析过了，则退出
 		return
 	}
 

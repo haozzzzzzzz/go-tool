@@ -3,6 +3,7 @@ package parse
 import (
 	"github.com/haozzzzzzzz/go-tool/common/source"
 	"github.com/sirupsen/logrus"
+	"go/types"
 	"strings"
 )
 
@@ -22,14 +23,14 @@ func NewWsTypesParser(
 
 // 解析含有ws标签的类型
 func (m *WsTypesParser) ParseWsTypes() (err error) {
-	parsedTypes, parsedVals, err := source.Parse(m.rootDir)
+	mergedTypesInfo, parsedTypes, parsedVals, err := source.Parse(m.rootDir)
 	if err != nil {
 		logrus.Errorf("parse source types failed. error: %s", err)
 		return
 	}
 
 	for _, parsedType := range parsedTypes {
-		err = m.typeFilter(parsedType)
+		err = m.typeFilter(mergedTypesInfo, parsedType)
 		if err != nil {
 			logrus.Errorf("ParseWsType typeFilter failed. error: %s", err)
 			return
@@ -57,7 +58,10 @@ func (m *WsTypesParser) ParseWsTypes() (err error) {
 	return
 }
 
-func (m *WsTypesParser) typeFilter(parsedType *source.ParsedType) (err error) {
+func (m *WsTypesParser) typeFilter(
+	mergedTypesInfo *types.Info,
+	parsedType *source.ParsedType,
+) (err error) {
 	wsTag, err := WsTagFromCommentText(parsedType.Doc)
 	if err != nil {
 		logrus.Errorf("parse ws tag failed. error: %s", err)
@@ -68,7 +72,7 @@ func (m *WsTypesParser) typeFilter(parsedType *source.ParsedType) (err error) {
 		return
 	}
 
-	typeIdent := source.ParseTypeName(parsedType.TypesInfo, parsedType.TypeName)
+	typeIdent := source.ParseTypeName(mergedTypesInfo, parsedType.TypeName)
 
 	if wsTag.IsMsgIdType {
 		m.wsTypes.MsgIdType = typeIdent
