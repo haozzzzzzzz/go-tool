@@ -18,6 +18,7 @@ const WsTagKeyUpBody WsTagKeyType = "ws_doc_up_body"         // 上行消息消�
 const WsTagKeyDownBody WsTagKeyType = "ws_doc_down_body"     // 下行消息消息体
 const WsTagKeyBody WsTagKeyType = "ws_doc_body"              // 上下行消息消息体
 
+// 消息体标签
 type WsTagBody struct {
 	TagKey WsTagKeyType `json:"tag_key"`
 	MsgIds []string     `json:"msg_id"` // 消息Id列表
@@ -171,6 +172,7 @@ func (m *WsTag) parseTag(tagKey WsTagKeyType, tagValue string) (err error) {
 
 }
 
+// 从注释中解析Websocket协议标签
 func WsTagFromCommentText(text string) (
 	wsTag *WsTag,
 	err error,

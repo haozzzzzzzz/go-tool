@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// websocket协议类型解析器
 type WsTypesParser struct {
 	rootDir string
 	wsTypes *WsTypes
@@ -58,6 +59,7 @@ func (m *WsTypesParser) ParseWsTypes() (err error) {
 	return
 }
 
+// 过滤websocket协议的类型
 func (m *WsTypesParser) typeFilter(
 	mergedTypesInfo *types.Info,
 	parsedType *source.ParsedType,
@@ -90,7 +92,7 @@ func (m *WsTypesParser) typeFilter(
 	}
 
 	if wsTag.HasDownCommon {
-		downMsg.Commons = append(upMsgs.Commons, &MsgCommon{
+		downMsg.Commons = append(downMsg.Commons, &MsgCommon{
 			TypeIdent: typeIdent,
 			DocLines:  wsTag.Doc.Lines,
 			Comment:   parsedType.Comment,
@@ -124,7 +126,7 @@ func (m *WsTypesParser) typeFilter(
 	return
 }
 
-// parse msg id
+// 过滤websocket协议的消息ID
 func (m *WsTypesParser) msgIdFilter(parsedVal *source.ParsedVal) (err error) {
 	if parsedVal.Type != m.wsTypes.MsgIdType.TypeName.Type() {
 		return
@@ -170,16 +172,18 @@ func (m *WsTypesParser) WsTypes() *WsTypes {
 
 // ws types
 type UpDownMsgs struct {
-	Commons         []*MsgCommon
-	StrMsgIdMapBody map[string]*MsgBody
+	Commons         []*MsgCommon        // 公参
+	StrMsgIdMapBody map[string]*MsgBody // 消息id->消息负载
 }
 
+// 消息公参
 type MsgCommon struct {
 	TypeIdent *source.TypeIdent
 	DocLines  []string
 	Comment   string
 }
 
+// 消息负载
 type MsgBody struct {
 	StrMsgId  string
 	MsgId     *source.ParsedVal
@@ -196,11 +200,11 @@ func NewUpDownMsgs() *UpDownMsgs {
 }
 
 type WsTypes struct {
-	MsgIdType *source.TypeIdent
+	MsgIdType *source.TypeIdent            // msg id类型
 	MsgIdMap  map[string]*source.ParsedVal // str_val -> parsed_val
 
-	UpMsgs   *UpDownMsgs
-	DownMsgs *UpDownMsgs
+	UpMsgs   *UpDownMsgs // 上行消息
+	DownMsgs *UpDownMsgs // 下行消息
 }
 
 func NewWsTypes() *WsTypes {
@@ -241,6 +245,7 @@ func (m *WsTypes) Output() (output *WsTypesOutput) {
 		output.MsgIds = append(output.MsgIds, oMsgId)
 	}
 
+	// 上行公参
 	for _, upCommon := range m.UpMsgs.Commons {
 		commonOut := &WsMsgCommonOutput{
 			Doc:   "",
@@ -261,6 +266,7 @@ func (m *WsTypes) Output() (output *WsTypesOutput) {
 		output.UpMsgCommons = append(output.UpMsgCommons, commonOut)
 	}
 
+	// 下行公参数
 	for _, downCommon := range m.DownMsgs.Commons {
 		commonOut := &WsMsgCommonOutput{
 			Doc:   "",

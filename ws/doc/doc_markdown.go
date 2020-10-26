@@ -70,7 +70,7 @@ func (m *WsTypesMdWriter) WriteUpMsg() {
 }
 
 func (m *WsTypesMdWriter) WriteDownMsg() {
-	m.WriteCommon("下行消息公参", m.wsTypes.UpMsgCommons)
+	m.WriteCommon("下行消息公参", m.wsTypes.DownMsgCommons)
 	m.WriteSectionSeperate()
 	m.WriteBody("下行消息负载", m.wsTypes.DownMsgBodys)
 }
