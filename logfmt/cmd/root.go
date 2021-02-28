@@ -16,6 +16,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/haozzzzzzzz/go-rapid-development/utils/ujson"
+	"github.com/sirupsen/logrus"
 	"os"
 
 	"bufio"
@@ -52,6 +54,13 @@ var rootCmd = &cobra.Command{
 				continue
 			}
 
+			prettyObj, err := ujson.MarshalPretty(logData)
+			if err != nil {
+				logrus.Errorf("marshal prettey failed. error: %s", err)
+				err = nil
+				continue
+			}
+
 			var (
 				strLevel   string
 				strMessage string
@@ -70,9 +79,11 @@ var rootCmd = &cobra.Command{
 				strTime = logData["time"].(string)
 			}
 
+			_ = strMessage
+
 			fmt.Println("-------------------------------------------------------")
 			fmt.Printf("%s %s\n", strLevel, strTime)
-			fmt.Printf(strMessage + "\n")
+			fmt.Println(string(prettyObj))
 		}
 
 	},
