@@ -2,13 +2,13 @@ package parser
 
 import (
 	"fmt"
+	"github.com/haozzzzzzzz/go-tool/common/source"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 
 	"github.com/haozzzzzzzz/go-rapid-development/api/request"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/file"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
-	"github.com/haozzzzzzzz/go-tool/api/com/project"
 
 	"github.com/haozzzzzzzz/go-tool/lib/gofmt"
 
@@ -29,7 +29,7 @@ func NewApiParser(serviceDir string) (apiParser *ApiParser, err error) {
 	apiDir := fmt.Sprintf("%s/api", serviceDir)
 
 	if file.PathExists(apiDir) {
-		err = os.MkdirAll(apiDir, project.ProjectDirMode)
+		err = os.MkdirAll(apiDir, source.ProjectDirMode)
 		if nil != err {
 			logrus.Errorf("mkdir %s failed. error: %s.", apiDir, err)
 			return
@@ -155,7 +155,7 @@ func (m *ApiParser) SaveApisToFile(
 		return
 	}
 
-	err = ioutil.WriteFile(filePath, byteYamlApis, project.ProjectFileMode)
+	err = ioutil.WriteFile(filePath, byteYamlApis, source.ProjectFileMode)
 	if nil != err {
 		logrus.Errorf("write apis.yaml failed. %s.", err)
 		return

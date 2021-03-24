@@ -16,7 +16,6 @@ import (
 
 	"github.com/go-openapi/spec"
 	"github.com/haozzzzzzzz/go-rapid-development/api/request"
-	"github.com/haozzzzzzzz/go-tool/api/com/project"
 	"github.com/haozzzzzzzz/go-tool/lib/lswagger"
 	"github.com/sirupsen/logrus"
 )
@@ -253,7 +252,7 @@ func (m *SwaggerSpec) SaveToFile(fileName string) (err error) {
 		return
 	}
 
-	err = ioutil.WriteFile(fileName, out, project.ProjectFileMode)
+	err = ioutil.WriteFile(fileName, out, source.ProjectFileMode)
 	if nil != err {
 		logrus.Errorf("save spec to file failed. error: %s.", err)
 		return
