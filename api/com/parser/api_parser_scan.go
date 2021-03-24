@@ -612,6 +612,8 @@ func ParsePkgApis(
 	return
 }
 
+// 解析ginbuilder.HandleFunc
+// https://github.com/haozzzzzzzz/go-rapid-development/tree/master/web/ginbuilder
 func ParseGinbuilderHandleFuncApi(
 	apiItem *ApiItem,
 	genDel *ast.GenDecl,
@@ -739,6 +741,8 @@ func ParseGinbuilderHandleFuncApi(
 	return
 }
 
+// 解析gin handler
+// https://github.com/gin-gonic/gin
 func ParseGinHandlerFuncApi(
 	apiItem *ApiItem,
 	funcDecl *ast.FuncDecl,
@@ -774,6 +778,7 @@ func ParseGinHandlerFuncApi(
 
 }
 
+// 解析handler里的请求结构和返回结构
 func parseApiFuncBody(
 	apiItem *ApiItem,
 	funcBody *ast.BlockStmt,
