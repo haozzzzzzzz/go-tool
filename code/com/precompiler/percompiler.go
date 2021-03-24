@@ -282,7 +282,7 @@ func PrecompileFile(filename string, params map[string]interface{}) (success boo
 		return
 	}
 
-	err = ioutil.WriteFile(compiledFilename, []byte(compiledFileText), project.ProjectFileMode)
+	err = ioutil.WriteFile(compiledFilename, []byte(compiledFileText), source.ProjectFileMode)
 	if nil != err {
 		logrus.Errorf("write file failed. filename: %s, error: %s.", compiledFilename, err)
 		return
