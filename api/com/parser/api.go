@@ -160,6 +160,13 @@ type ApiItem struct {
 	Deprecated  bool     `json:"deprecated" yaml:"deprecated"` // 是否是弃用的
 }
 
+func NewApiItem() *ApiItem {
+	return &ApiItem{
+		RelativePaths: []string{},
+		Tags:          []string{},
+	}
+}
+
 func (m *ApiItem) PackageFuncName() string {
 	return fmt.Sprintf("%s.%s", m.ApiFile.PackageRelAlias, m.ApiHandlerFunc)
 }

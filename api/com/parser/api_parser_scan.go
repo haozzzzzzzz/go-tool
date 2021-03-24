@@ -1,9 +1,7 @@
 package parser
 
 import (
-	"errors"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
-	"github.com/haozzzzzzzz/go-tool/common/source"
 	"github.com/haozzzzzzzz/go-tool/common/source/mod"
 	"go/ast"
 	"go/importer"
@@ -20,8 +18,6 @@ import (
 
 	"strings"
 
-	"github.com/go-playground/validator"
-	"github.com/haozzzzzzzz/go-rapid-development/api/request"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/file"
 	"github.com/sirupsen/logrus"
 )
@@ -469,97 +465,108 @@ func ParsePkgApis(
 
 		// search package api types
 		for _, decl := range astFile.Decls { // 遍历顶层所有变量，寻找HandleFunc
-			apiItem := &ApiItem{
-				RelativePaths: make([]string, 0),
+			apiItem, success, errP := ApiDeclParseFuncs.ParseApi(decl, typesInfo, parseRequestData)
+			err = errP
+			if err != nil {
+				logrus.Errorf("parse api declare failed. error: %s", err)
+				return
 			}
 
-			switch decl.(type) {
-			case *ast.GenDecl: // var xx = yy
-				genDel, ok := decl.(*ast.GenDecl)
-				if !ok {
-					continue
-				}
-
-				if len(genDel.Specs) == 0 {
-					return
-				}
-
-				valueSpec, ok := genDel.Specs[0].(*ast.ValueSpec)
-				if !ok {
-					continue
-				}
-
-				obj := valueSpec.Names[0] // variables with name
-				selectorExpr, ok := valueSpec.Type.(*ast.SelectorExpr)
-				if !ok {
-					continue
-				}
-
-				xIdent, ok := selectorExpr.X.(*ast.Ident)
-				if !ok {
-					continue
-				}
-
-				selIdent := selectorExpr.Sel
-
-				if !(xIdent.Name == "ginbuilder" && selIdent.Name == "HandleFunc") {
-					continue
-				}
-
-				err = ParseGinbuilderHandleFuncApi(
-					apiItem,
-					genDel,
-					valueSpec,
-					obj,
-					typesInfo,
-					parseRequestData,
-				)
-				if nil != err {
-					logrus.Errorf("parse ginbuild handle func api failed. error: %s.", err)
-					return
-				}
-
+			if success && apiItem != nil {
 				fileApis = append(fileApis, apiItem)
-
-			case *ast.FuncDecl: // type HandlerFunc func(*Context)
-				funcDecl := decl.(*ast.FuncDecl)
-
-				// 判断是否是gin.HandlerFunc
-				paramsList := funcDecl.Type.Params.List
-				if len(paramsList) != 1 || funcDecl.Type.Results != nil {
-					continue
-				}
-
-				paramField := paramsList[0]
-				startExpr, ok := paramField.Type.(*ast.StarExpr)
-				if !ok {
-					continue
-				}
-
-				selectExpr, ok := startExpr.X.(*ast.SelectorExpr)
-				if !ok || selectExpr.X == nil || selectExpr.Sel == nil {
-					continue
-				}
-
-				pkgIdent := selectExpr.X.(*ast.Ident)
-				objIdent := selectExpr.Sel
-
-				if !(pkgIdent.Name == "gin" && objIdent.Name == "Context") {
-					continue
-				}
-
-				err = ParseGinHandlerFuncApi(apiItem, funcDecl, typesInfo, parseRequestData)
-				if nil != err {
-					logrus.Errorf("parse gin HandlerFunc failed. error: %s.", err)
-					return
-				}
-
-				fileApis = append(fileApis, apiItem)
-
-			default:
-				continue
-
 			}
+
+			////apiItem := &ApiItem{
+			////	RelativePaths: make([]string, 0),
+			////}
+			//
+			//switch decl.(type) {
+			//case *ast.GenDecl: // var xx = yy
+			//	//genDel, ok := decl.(*ast.GenDecl)
+			//	//if !ok {
+			//	//	continue
+			//	//}
+			//	//
+			//	//if len(genDel.Specs) == 0 {
+			//	//	return
+			//	//}
+			//	//
+			//	//valueSpec, ok := genDel.Specs[0].(*ast.ValueSpec)
+			//	//if !ok {
+			//	//	continue
+			//	//}
+			//	//
+			//	//obj := valueSpec.Names[0] // variables with name
+			//	//selectorExpr, ok := valueSpec.Type.(*ast.SelectorExpr)
+			//	//if !ok {
+			//	//	continue
+			//	//}
+			//	//
+			//	//xIdent, ok := selectorExpr.X.(*ast.Ident)
+			//	//if !ok {
+			//	//	continue
+			//	//}
+			//	//
+			//	//selIdent := selectorExpr.Sel
+			//	//
+			//	//if !(xIdent.Name == "ginbuilder" && selIdent.Name == "HandleFunc") {
+			//	//	continue
+			//	//}
+			//	//
+			//	//err = ParseGinbuilderHandleFuncApi(
+			//	//	apiItem,
+			//	//	genDel,
+			//	//	valueSpec,
+			//	//	obj,
+			//	//	typesInfo,
+			//	//	parseRequestData,
+			//	//)
+			//	//if nil != err {
+			//	//	logrus.Errorf("parse ginbuild handle func api failed. error: %s.", err)
+			//	//	return
+			//	//}
+			//
+			//	fileApis = append(fileApis, apiItem)
+			//
+			//case *ast.FuncDecl: // type HandlerFunc func(*Context)
+			//	funcDecl := decl.(*ast.FuncDecl)
+			//
+			//	// 判断是否是gin.HandlerFunc
+			//	paramsList := funcDecl.Type.Params.List
+			//	if len(paramsList) != 1 || funcDecl.Type.Results != nil {
+			//		continue
+			//	}
+			//
+			//	paramField := paramsList[0]
+			//	startExpr, ok := paramField.Type.(*ast.StarExpr)
+			//	if !ok {
+			//		continue
+			//	}
+			//
+			//	selectExpr, ok := startExpr.X.(*ast.SelectorExpr)
+			//	if !ok || selectExpr.X == nil || selectExpr.Sel == nil {
+			//		continue
+			//	}
+			//
+			//	pkgIdent := selectExpr.X.(*ast.Ident)
+			//	objIdent := selectExpr.Sel
+			//
+			//	if !(pkgIdent.Name == "gin" && objIdent.Name == "Context") {
+			//		continue
+			//	}
+			//
+			//	err = ParseGinHandlerFuncApi(apiItem, funcDecl, typesInfo, parseRequestData)
+			//	if nil != err {
+			//		logrus.Errorf("parse gin HandlerFunc failed. error: %s.", err)
+			//		return
+			//	}
+			//
+			//	fileApis = append(fileApis, apiItem)
+			//
+			//default:
+			//	continue
+			//
+			//}
 
 		}
 
@@ -605,268 +612,6 @@ func ParsePkgApis(
 			api.ApiFile = apiFile
 			api.MergeInfoFromApiInfo()
 			apis = append(apis, api)
-		}
-
-	}
-
-	return
-}
-
-// 解析ginbuilder.HandleFunc
-// https://github.com/haozzzzzzzz/go-rapid-development/tree/master/web/ginbuilder
-func ParseGinbuilderHandleFuncApi(
-	apiItem *ApiItem,
-	genDel *ast.GenDecl,
-	valueSpec *ast.ValueSpec,
-	obj *ast.Ident, // variables with name
-	typesInfo *types.Info,
-	parseRequestData bool,
-) (err error) {
-	// ginbuilder.HandlerFunc obj
-	apiItem.ApiHandlerFunc = obj.Name
-	apiItem.ApiHandlerFuncType = ApiHandlerFuncTypeGinbuilderHandleFunc
-
-	if genDel.Doc != nil {
-		apiComment := genDel.Doc.Text()
-		commentTags, errParse := ParseCommentTags(apiComment)
-		err = errParse
-		if nil != err {
-			logrus.Errorf("parse api comment tags failed. error: %s.", err)
-			return
-		}
-
-		if commentTags != nil {
-			apiItem.MergeInfoFomCommentTags(commentTags)
-		}
-
-	}
-
-	for _, value := range valueSpec.Values { // 遍历属性
-		compositeLit, ok := value.(*ast.CompositeLit)
-		if !ok {
-			continue
-		}
-
-		// compositeLit.Elts
-		for _, elt := range compositeLit.Elts {
-			keyValueExpr, ok := elt.(*ast.KeyValueExpr)
-			if !ok {
-				continue
-			}
-
-			keyIdent, ok := keyValueExpr.Key.(*ast.Ident)
-			if !ok {
-				continue
-			}
-
-			switch keyIdent.Name {
-			case "HttpMethod":
-				valueLit, ok := keyValueExpr.Value.(*ast.BasicLit)
-				if !ok {
-					break
-				}
-
-				value := strings.Replace(valueLit.Value, "\"", "", -1)
-				value = strings.ToUpper(value)
-				switch value {
-				case request.METHOD_GET,
-					request.METHOD_POST,
-					request.METHOD_PUT,
-					request.METHOD_PATCH,
-					request.METHOD_HEAD,
-					request.METHOD_OPTIONS,
-					request.METHOD_DELETE,
-					request.METHOD_CONNECT,
-					request.METHOD_TRACE,
-					request.METHOD_ANY:
-
-				default:
-					err = errors.New(fmt.Sprintf("unsupported http method : %s", value))
-					logrus.Errorf("mapping unsupported api failed. %s.", err)
-					return
-				}
-
-				apiItem.HttpMethod = value
-
-			case "RelativePath": // 废弃
-				valueLit, ok := keyValueExpr.Value.(*ast.BasicLit)
-				if !ok {
-					break
-				}
-
-				value := strings.Replace(valueLit.Value, "\"", "", -1)
-				apiItem.RelativePaths = append(apiItem.RelativePaths, value)
-
-			case "RelativePaths":
-				compLit, ok := keyValueExpr.Value.(*ast.CompositeLit)
-				if !ok {
-					break
-				}
-
-				for _, elt := range compLit.Elts {
-					basicLit, ok := elt.(*ast.BasicLit)
-					if !ok {
-						continue
-					}
-
-					value := strings.Replace(basicLit.Value, "\"", "", -1)
-					apiItem.RelativePaths = append(apiItem.RelativePaths, value)
-				}
-
-			case "Handle":
-				funcLit, ok := keyValueExpr.Value.(*ast.FuncLit)
-				if !ok {
-					break
-				}
-
-				// if parse request data
-				if parseRequestData == false {
-					break
-				}
-
-				// parse request data
-				parseApiFuncBody(apiItem, funcLit.Body, typesInfo)
-
-			}
-
-		}
-	}
-
-	err = validator.New().Struct(apiItem)
-	if nil != err {
-		logrus.Errorf("%#v\n invalid", apiItem)
-		return
-	}
-
-	return
-}
-
-// 解析gin handler
-// https://github.com/gin-gonic/gin
-func ParseGinHandlerFuncApi(
-	apiItem *ApiItem,
-	funcDecl *ast.FuncDecl,
-	typesInfo *types.Info,
-	parseRequestData bool,
-) (err error) {
-	apiItem.ApiHandlerFunc = funcDecl.Name.Name
-	apiItem.ApiHandlerFuncType = ApiHandlerFuncTypeGinHandlerFunc
-
-	// 读取注释
-	if funcDecl.Doc != nil {
-		apiComment := funcDecl.Doc.Text()
-		commentTags, errParse := ParseCommentTags(apiComment)
-		err = errParse
-		if nil != err {
-			logrus.Errorf("parse api comment tags failed. error: %s.", err)
-			return
-		}
-
-		if commentTags != nil {
-			apiItem.MergeInfoFomCommentTags(commentTags)
-		}
-	}
-
-	if !parseRequestData {
-		return
-	}
-
-	// parse request data
-	parseApiFuncBody(apiItem, funcDecl.Body, typesInfo)
-
-	return
-
-}
-
-// 解析handler里的请求结构和返回结构
-func parseApiFuncBody(
-	apiItem *ApiItem,
-	funcBody *ast.BlockStmt,
-	typesInfo *types.Info,
-) {
-	for _, funcStmt := range funcBody.List {
-		switch funcStmt.(type) {
-		case *ast.AssignStmt:
-			assignStmt := funcStmt.(*ast.AssignStmt)
-			lhs := assignStmt.Lhs
-			rhs := assignStmt.Rhs
-
-			_ = lhs
-			_ = rhs
-
-			for _, expr := range lhs {
-				ident, ok := expr.(*ast.Ident)
-				if !ok {
-					continue
-				}
-
-				identType := typesInfo.Defs[ident]
-				typeVar, ok := identType.(*types.Var)
-				if !ok {
-					continue
-				}
-
-				switch ident.Name {
-				case "headerData":
-					iType := source.ParseType(typesInfo, typeVar.Type())
-					if iType == nil {
-						continue
-					}
-
-					structType, ok := iType.(*source.StructType)
-					if ok {
-						apiItem.HeaderData = structType
-					} else {
-						logrus.Warnf("header data is not struct type")
-					}
-
-				case "pathData", "uriData":
-					iType := source.ParseType(typesInfo, typeVar.Type())
-					if iType == nil {
-						continue
-					}
-
-					structType, ok := iType.(*source.StructType)
-					if ok {
-						apiItem.UriData = structType
-					} else {
-						logrus.Warnf("uri data is not struct type")
-					}
-
-				case "queryData":
-					iType := source.ParseType(typesInfo, typeVar.Type())
-					if iType == nil {
-						continue
-					}
-
-					structType, ok := iType.(*source.StructType)
-					if ok {
-						apiItem.QueryData = structType
-					} else {
-						logrus.Warnf("query data is not struct type")
-					}
-
-				case "postData":
-					iType := source.ParseType(typesInfo, typeVar.Type())
-					if iType == nil {
-						continue
-					}
-
-					apiItem.PostData = iType
-
-				case "respData":
-					iType := source.ParseType(typesInfo, typeVar.Type())
-					if iType == nil {
-						continue
-					}
-
-					apiItem.RespData = iType
-
-				}
-			}
-
-		case *ast.ReturnStmt:
-
 		}
 
 	}
