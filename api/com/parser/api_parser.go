@@ -48,6 +48,16 @@ func NewApiParser(serviceDir string) (apiParser *ApiParser, err error) {
 	return
 }
 
+func NewApiParserSpecify(apiDir string) (apiParser *ApiParser, err error) {
+	goPath := os.Getenv("GOPATH")
+	apiParser = &ApiParser{
+		ServiceDir: apiDir,
+		ApiDir:     apiDir,
+		GoPaths:    strings.Split(goPath, ":"),
+	}
+	return
+}
+
 func (m *ApiParser) apiUrlKey(uri string, method string) string {
 	return fmt.Sprintf("%s_%s", uri, method)
 }
