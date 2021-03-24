@@ -2,7 +2,7 @@ package doc
 
 import (
 	"github.com/haozzzzzzzz/go-rapid-development/utils/ujson"
-	"github.com/haozzzzzzzz/go-tool/api/com/project"
+	"github.com/haozzzzzzzz/go-tool/common/source"
 	"github.com/haozzzzzzzz/go-tool/ws/parse"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -23,7 +23,7 @@ func WriteDocJson(
 		return
 	}
 
-	err = ioutil.WriteFile(filepath, bDoc, project.ProjectFileMode)
+	err = ioutil.WriteFile(filepath, bDoc, source.ProjectFileMode)
 	if err != nil {
 		logrus.Errorf("write json doc file failed. error: %s", err)
 		return

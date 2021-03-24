@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/gosexy/to"
 	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
-	"github.com/haozzzzzzzz/go-tool/api/com/project"
+	"github.com/haozzzzzzzz/go-tool/common/source"
 	"github.com/haozzzzzzzz/go-tool/lib/gofmt"
 	"github.com/sirupsen/logrus"
 	lua "github.com/yuin/gopher-lua"
@@ -248,7 +248,7 @@ func PrecompileFile(filename string, params map[string]interface{}) (success boo
 		}
 
 		// save pre file text
-		err = ioutil.WriteFile(filename, []byte(preFileText), project.ProjectFileMode)
+		err = ioutil.WriteFile(filename, []byte(preFileText), source.ProjectFileMode)
 		if nil != err {
 			logrus.Errorf("write file failed. filename: %s, error: %s.", filename, err)
 			return
