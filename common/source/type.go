@@ -42,7 +42,7 @@ func NewBasicType(name string) *BasicType {
 
 // struct field
 type Field struct {
-	Name     string            `json:"name" yaml:"name"`
+	Name     string            `json:"name" yaml:"name"` // field name
 	TypeName string            `json:"type_name" yaml:"type_name"`
 	Tags     map[string]string `json:"tags" yaml:"tags"`
 	TypeSpec IType             `json:"type_spec" yaml:"type_spec"`
@@ -141,6 +141,11 @@ func (m *StructType) AddEmbedded(fields ...*Field) {
 
 func (m *StructType) IsEmpty() bool {
 	return len(m.Fields) == 0
+}
+
+func (m *StructType) Copy() *StructType {
+	clone := *m
+	return &clone
 }
 
 func NewStructType() *StructType {

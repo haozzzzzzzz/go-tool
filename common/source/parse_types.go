@@ -268,8 +268,8 @@ func ParseType(
 	info *types.Info,
 	t types.Type,
 ) (iType IType) {
-	iType, ok := ITypeMap[t]
-	if ok { // 如果类型解析过了，则退出
+	iType, ok := ITypeMap[t] // 可能是类型一样，但是名字不一样的类
+	if ok {                  // 如果类型解析过了，则退出
 		return
 	}
 
@@ -287,12 +287,14 @@ func ParseType(
 		iType = ParseType(info, tNamed.Underlying())
 		ITypeMap[t] = iType
 
-		// 如果是structType
-		structType, ok := iType.(*StructType)
-		if ok {
-			structType.Name = tNamed.Obj().Name()
-			iType = structType
-		}
+		//// 如果是structType
+		//// 可能内部ITypeMap使用同一个对象，则复制一个出来，避免多个使用type A B重新定义的类名字被改写
+		//structType, ok := iType.(*StructType)
+		//if ok {
+		//	cloneStruct := structType.Copy()
+		//	cloneStruct.Name = tNamed.Obj().Name()
+		//	iType = cloneStruct
+		//}
 
 	case *types.Struct:
 		structType := NewStructType()
@@ -301,6 +303,7 @@ func ParseType(
 
 		tStructType := t.(*types.Struct)
 
+		// 从抽象树中查找结构体的声明
 		typeAstExpr := FindStructAstExprFromInfoTypes(info, tStructType)
 		if typeAstExpr == nil { // 找不到expr
 			hasFieldsJsonTag := false

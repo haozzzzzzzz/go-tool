@@ -183,7 +183,7 @@ func ParseGinbuilderHandleFuncApi(
 				}
 
 				// parse request data
-				parseApiFuncBody(apiItem, funcLit.Body, typesInfo)
+				ParseApiFuncBody(apiItem, funcLit.Body, typesInfo)
 
 			}
 

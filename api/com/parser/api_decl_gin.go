@@ -87,14 +87,14 @@ func ParseGinHandlerFuncApi(
 	}
 
 	// parse request data
-	parseApiFuncBody(apiItem, funcDecl.Body, typesInfo)
+	ParseApiFuncBody(apiItem, funcDecl.Body, typesInfo)
 
 	return
 
 }
 
 // 解析handler里的请求结构和返回结构
-func parseApiFuncBody(
+func ParseApiFuncBody(
 	apiItem *ApiItem,
 	funcBody *ast.BlockStmt,
 	typesInfo *types.Info,

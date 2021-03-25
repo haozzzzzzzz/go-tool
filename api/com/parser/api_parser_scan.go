@@ -382,8 +382,9 @@ func ParsePkgApis(
 
 			// 合并types.Info
 			for _, astFile := range pkg.Syntax {
+				fileName := pkg.Fset.File(astFile.Pos()).Name()
 				astFiles = append(astFiles, astFile)
-				astFileNames[astFile] = pkg.Fset.File(astFile.Pos()).Name()
+				astFileNames[astFile] = fileName
 			}
 
 			// 包内的类型
@@ -475,98 +476,6 @@ func ParsePkgApis(
 			if success && apiItem != nil {
 				fileApis = append(fileApis, apiItem)
 			}
-
-			////apiItem := &ApiItem{
-			////	RelativePaths: make([]string, 0),
-			////}
-			//
-			//switch decl.(type) {
-			//case *ast.GenDecl: // var xx = yy
-			//	//genDel, ok := decl.(*ast.GenDecl)
-			//	//if !ok {
-			//	//	continue
-			//	//}
-			//	//
-			//	//if len(genDel.Specs) == 0 {
-			//	//	return
-			//	//}
-			//	//
-			//	//valueSpec, ok := genDel.Specs[0].(*ast.ValueSpec)
-			//	//if !ok {
-			//	//	continue
-			//	//}
-			//	//
-			//	//obj := valueSpec.Names[0] // variables with name
-			//	//selectorExpr, ok := valueSpec.Type.(*ast.SelectorExpr)
-			//	//if !ok {
-			//	//	continue
-			//	//}
-			//	//
-			//	//xIdent, ok := selectorExpr.X.(*ast.Ident)
-			//	//if !ok {
-			//	//	continue
-			//	//}
-			//	//
-			//	//selIdent := selectorExpr.Sel
-			//	//
-			//	//if !(xIdent.Name == "ginbuilder" && selIdent.Name == "HandleFunc") {
-			//	//	continue
-			//	//}
-			//	//
-			//	//err = ParseGinbuilderHandleFuncApi(
-			//	//	apiItem,
-			//	//	genDel,
-			//	//	valueSpec,
-			//	//	obj,
-			//	//	typesInfo,
-			//	//	parseRequestData,
-			//	//)
-			//	//if nil != err {
-			//	//	logrus.Errorf("parse ginbuild handle func api failed. error: %s.", err)
-			//	//	return
-			//	//}
-			//
-			//	fileApis = append(fileApis, apiItem)
-			//
-			//case *ast.FuncDecl: // type HandlerFunc func(*Context)
-			//	funcDecl := decl.(*ast.FuncDecl)
-			//
-			//	// 判断是否是gin.HandlerFunc
-			//	paramsList := funcDecl.Type.Params.List
-			//	if len(paramsList) != 1 || funcDecl.Type.Results != nil {
-			//		continue
-			//	}
-			//
-			//	paramField := paramsList[0]
-			//	startExpr, ok := paramField.Type.(*ast.StarExpr)
-			//	if !ok {
-			//		continue
-			//	}
-			//
-			//	selectExpr, ok := startExpr.X.(*ast.SelectorExpr)
-			//	if !ok || selectExpr.X == nil || selectExpr.Sel == nil {
-			//		continue
-			//	}
-			//
-			//	pkgIdent := selectExpr.X.(*ast.Ident)
-			//	objIdent := selectExpr.Sel
-			//
-			//	if !(pkgIdent.Name == "gin" && objIdent.Name == "Context") {
-			//		continue
-			//	}
-			//
-			//	err = ParseGinHandlerFuncApi(apiItem, funcDecl, typesInfo, parseRequestData)
-			//	if nil != err {
-			//		logrus.Errorf("parse gin HandlerFunc failed. error: %s.", err)
-			//		return
-			//	}
-			//
-			//	fileApis = append(fileApis, apiItem)
-			//
-			//default:
-			//	continue
-			//
-			//}
 
 		}
 

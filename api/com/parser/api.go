@@ -141,6 +141,7 @@ func MergeApiItemParams(items ...*ApiItemParams) (params *ApiItemParams, err err
 
 const ApiHandlerFuncTypeGinbuilderHandleFunc uint8 = 1
 const ApiHandlerFuncTypeGinHandlerFunc uint8 = 2
+const ApiHandlerFuncHttpHandlerFunc uint8 = 3 // net.http handle func
 
 type ApiItem struct {
 	ApiItemParams
