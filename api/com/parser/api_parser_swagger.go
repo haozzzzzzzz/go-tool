@@ -4,7 +4,6 @@ This package parses api items to swagger specification
 package parser
 
 import (
-	"github.com/haozzzzzzzz/go-rapid-development/utils/id"
 	"github.com/haozzzzzzzz/go-tool/common/source"
 	"strings"
 
@@ -123,8 +122,14 @@ func (m *SwaggerSpec) parsePathApis(path string, apis []*ApiItem) (err error) {
 		if api.PostData != nil {
 			body := &spec.Parameter{}
 			body.In = "body"
-			body.Name = api.PostData.TypeName()
-			body.Description = api.PostData.TypeDescription()
+			body.Name = "body"
+			postTypeName := api.PostData.TypeName()
+			postTypeDesc := api.PostData.TypeDescription()
+			body.Description = postTypeName
+			if postTypeDesc != "" {
+				body.Description += "\n" + postTypeDesc
+			}
+
 			body.Required = true
 			body.Schema = m.swaggerSchemaConverter.ToSwaggerSchema(api.PostData, []source.IType{})
 
@@ -396,6 +401,7 @@ func (m *ITypeSwaggerSchemaConverter) ToSwaggerSchema(
 
 	default:
 		fmt.Println("unsupported itype for swagger schema")
+
 	}
 
 	return
@@ -419,8 +425,7 @@ func (m *ITypeSwaggerSchemaConverter) structTypeSwaggerSchema(
 	defer func() {
 		refSchema = &spec.Schema{}
 
-		defId := fmt.Sprintf("temp-%s", id.UniqueID())
-
+		defId := m.genDefId(structType)
 		refLink := fmt.Sprintf("#/definitions/%s", defId)
 		refSchema.Ref = spec.MustCreateRef(refLink)
 
@@ -460,7 +465,7 @@ func (m *ITypeSwaggerSchemaConverter) structTypeSwaggerSchema(
 		for fieldName, fieldSchema := range embeddedSchema.Properties {
 			_, ok := schema.Properties[fieldName]
 			if ok {
-				logrus.Warnf("conflict embedded struct field name. fieldName: %s, embedded struct: %s", fieldName, embeddedField.TypeName)
+				//logrus.Warnf("conflict embedded struct field name. fieldName: %s, embedded struct: %s", fieldName, embeddedField.TypeName)
 				continue
 			}
 
@@ -469,6 +474,12 @@ func (m *ITypeSwaggerSchemaConverter) structTypeSwaggerSchema(
 	}
 
 	return
+}
+
+func (m *ITypeSwaggerSchemaConverter) genDefId(structType *source.StructType) (defId string) {
+	typeName := structType.Name
+	strAddr := fmt.Sprintf("%p", structType)
+	return fmt.Sprintf("%s-%s", typeName, strAddr)
 }
 
 func (m *ITypeSwaggerSchemaConverter) SwaggerDefinitions() (definitions spec.Definitions) {
