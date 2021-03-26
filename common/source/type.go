@@ -104,8 +104,6 @@ type StructType struct {
 	Fields      []*Field          `json:"fields" yaml:"fields"`
 	mField      map[string]*Field `json:"-" yaml:"-"`
 	Description string            `json:"description" yaml:"description"`
-
-	Underlying *StructType `json:"underlying" yaml:"underlying"` // 底层类。如果一个类被重新定义, type A B后，我们认为A、B类底层同属于B
 }
 
 func (m *StructType) TypeName() string {
@@ -147,11 +145,6 @@ func (m *StructType) IsEmpty() bool {
 
 func (m *StructType) Copy() *StructType {
 	clone := *m
-
-	if clone.Underlying != nil {
-		clone.Underlying = m
-	}
-
 	return &clone
 }
 
