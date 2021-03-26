@@ -328,7 +328,7 @@ func ParseType(
 			}
 
 			if hasFieldsJsonTag { // 有导出的jsontag，但是找不到定义的
-				logrus.Warnf("cannot found expr of type: %s", tStructType)
+				logrus.Warnf("cannot find expr of type: %s", tStructType)
 			}
 		}
 
