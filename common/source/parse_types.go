@@ -285,16 +285,16 @@ func ParseType(
 	case *types.Named:
 		tNamed := t.(*types.Named)
 		iType = ParseType(info, tNamed.Underlying())
-		ITypeMap[t] = iType
+		ITypeMap[t] = iType // 记录底层类
 
-		//// 如果是structType
-		//// 可能内部ITypeMap使用同一个对象，则复制一个出来，避免多个使用type A B重新定义的类名字被改写
-		//structType, ok := iType.(*StructType)
-		//if ok {
-		//	cloneStruct := structType.Copy()
-		//	cloneStruct.Name = tNamed.Obj().Name()
-		//	iType = cloneStruct
-		//}
+		// 如果是structType
+		// 可能内部ITypeMap使用同一个对象，则复制一个出来，避免多个使用type A B重新定义的类名字被改写
+		structType, ok := iType.(*StructType)
+		if ok {
+			cloneStruct := structType.Copy()
+			cloneStruct.Name = tNamed.Obj().Name()
+			iType = cloneStruct // 返回复制类
+		}
 
 	case *types.Struct:
 		structType := NewStructType()

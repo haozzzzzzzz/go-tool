@@ -121,7 +121,7 @@ func (m *SwaggerSpec) parsePathApis(path string, apis []*ApiItem) (err error) {
 			body.Name = api.PostData.TypeName()
 			body.Description = api.PostData.TypeDescription()
 			body.Required = true
-			body.Schema = ITypeToSwaggerSchema(api.PostData)
+			body.Schema = ITypeToSwaggerSchema(api.PostData, []source.IType{})
 
 			operation.Parameters = append(operation.Parameters, *body)
 		}
@@ -132,9 +132,9 @@ func (m *SwaggerSpec) parsePathApis(path string, apis []*ApiItem) (err error) {
 		if api.RespData != nil {
 			// wrap data for ginbuilder.HandleFunc
 			if api.ApiHandlerFuncType == ApiHandlerFuncTypeGinbuilderHandleFunc {
-				successResponse.Schema = ITypeToSwaggerSchema(SuccessResponseStructType(api.RespData))
+				successResponse.Schema = ITypeToSwaggerSchema(SuccessResponseStructType(api.RespData), []source.IType{})
 			} else {
-				successResponse.Schema = ITypeToSwaggerSchema(api.RespData)
+				successResponse.Schema = ITypeToSwaggerSchema(api.RespData, []source.IType{})
 			}
 		}
 
@@ -301,19 +301,46 @@ func BasicTypeToSwaggerSchemaType(fieldType string) (swagType string) {
 	return
 }
 
-func ITypeToSwaggerSchema(iType source.IType) (schema *spec.Schema) {
+func ITypeToSwaggerSchema(
+	iType source.IType,
+	fieldTypeStack []source.IType, // 字段类型解析栈. TODO 后续所有类型改成model引用
+) (
+	schema *spec.Schema,
+) {
+	if fieldTypeStack == nil {
+		fieldTypeStack = make([]source.IType, 0)
+	}
+
+	// 检查是否有循环引用的类型
+	hasITypeLoop := false
+	for _, stackType := range fieldTypeStack {
+		if stackType == iType {
+			hasITypeLoop = true
+			break
+		}
+	}
+
 	schema = &spec.Schema{}
+	var subStack []source.IType
+	if !hasITypeLoop {
+		subStack = append(fieldTypeStack, iType)
+	}
+
 	switch iType.(type) {
 	case *source.StructType:
 		structType := iType.(*source.StructType)
 		schema.Type = []string{"object"}
+		if hasITypeLoop { // 结束循环
+			return
+		}
+
 		schema.Required = make([]string, 0)
 		schema.Properties = make(map[string]spec.Schema)
 
 		for _, field := range structType.Fields {
 			if !field.Embedded && field.Exported { // 非嵌入的、公开访问的field
 				jsonName := field.TagJson()
-				fieldSchema := ITypeToSwaggerSchema(field.TypeSpec)
+				fieldSchema := ITypeToSwaggerSchema(field.TypeSpec, subStack)
 				fieldSchema.Description = field.Description
 				if field.Required() {
 					fieldSchema.Required = []string{jsonName}
@@ -329,7 +356,7 @@ func ITypeToSwaggerSchema(iType source.IType) (schema *spec.Schema) {
 				continue
 			}
 
-			embeddedSchema := ITypeToSwaggerSchema(embeddedField.TypeSpec)
+			embeddedSchema := ITypeToSwaggerSchema(embeddedField.TypeSpec, subStack)
 			if embeddedSchema == nil {
 				logrus.Errorf("parse embedded struct type to swagger schema failed. embedded type: %s", embeddedField.TypeName)
 				continue
@@ -342,7 +369,8 @@ func ITypeToSwaggerSchema(iType source.IType) (schema *spec.Schema) {
 			for fieldName, fieldSchema := range embeddedSchema.Properties {
 				_, ok := schema.Properties[fieldName]
 				if ok {
-					logrus.Warnf("conflict embedded struct field name. fieldName: %s, embedded struct: %s", fieldName, embeddedField.TypeName)
+					// TODO 临时关闭
+					//logrus.Warnf("conflict embedded struct field name. fieldName: %s, embedded struct: %s", fieldName, embeddedField.TypeName)
 					continue
 				}
 
@@ -353,18 +381,24 @@ func ITypeToSwaggerSchema(iType source.IType) (schema *spec.Schema) {
 	case *source.MapType:
 		mapType := iType.(*source.MapType)
 		schema.Type = []string{"object"}
-		schema.AdditionalProperties = &spec.SchemaOrBool{}
+		if hasITypeLoop {
+			return
+		}
 
-		schema.AdditionalProperties.Schema = ITypeToSwaggerSchema(mapType.ValueSpec)
+		schema.AdditionalProperties = &spec.SchemaOrBool{}
+		schema.AdditionalProperties.Schema = ITypeToSwaggerSchema(mapType.ValueSpec, subStack)
 
 	case *source.ArrayType:
 		arrayType := iType.(*source.ArrayType)
 		schema.Type = []string{"array"}
+		if hasITypeLoop {
+			return
+		}
+
 		schema.Items = &spec.SchemaOrArray{}
-		schema.Items.Schema = ITypeToSwaggerSchema(arrayType.EltSpec)
+		schema.Items.Schema = ITypeToSwaggerSchema(arrayType.EltSpec, subStack)
 
 	case *source.InterfaceType:
-		//interType := iType.(*InterfaceType)
 		schema.Type = []string{"object"}
 
 	case *source.BasicType:
