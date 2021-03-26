@@ -11,5 +11,6 @@ var RootCmd = rootCmd
 func init() {
 	rootCmd.AddCommand(compile.CommandApiCompile())
 	rootCmd.AddCommand(compile.GenerateSwaggerSpecification())
+	rootCmd.AddCommand(compile.CmdMergeSwagger())
 	rootCmd.AddCommand(summary.CommandVersion())
 }

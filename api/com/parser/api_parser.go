@@ -20,8 +20,8 @@ import (
 )
 
 type ApiParser struct {
-	ServiceDir string
-	ApiDir     string
+	ServiceDir string // 服务根目录
+	ApiDir     string // 服务下api目录. api_dir和service_dir可以一样
 	GoPaths    []string
 }
 

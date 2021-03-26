@@ -4,6 +4,7 @@ This package parses api items to swagger specification
 package parser
 
 import (
+	"github.com/haozzzzzzzz/go-rapid-development/utils/id"
 	"github.com/haozzzzzzzz/go-tool/common/source"
 	"strings"
 
@@ -16,14 +17,16 @@ import (
 )
 
 type SwaggerSpec struct {
-	apis    []*ApiItem
-	Swagger *lswagger.Swagger
+	apis                   []*ApiItem
+	Swagger                *lswagger.Swagger
+	swaggerSchemaConverter *ITypeSwaggerSchemaConverter
 }
 
 func NewSwaggerSpec() (swgSpec *SwaggerSpec) {
 	swgSpec = &SwaggerSpec{
-		apis:    make([]*ApiItem, 0),
-		Swagger: lswagger.NewSwagger(),
+		apis:                   make([]*ApiItem, 0),
+		Swagger:                lswagger.NewSwagger(),
+		swaggerSchemaConverter: NewITypeSwaggerSchemaConverter(),
 	}
 	return
 }
@@ -63,6 +66,8 @@ func (m *SwaggerSpec) ParseApis() (
 		}
 	}
 
+	// 生成model definitions
+	m.setDefinitions()
 	return
 }
 
@@ -121,7 +126,7 @@ func (m *SwaggerSpec) parsePathApis(path string, apis []*ApiItem) (err error) {
 			body.Name = api.PostData.TypeName()
 			body.Description = api.PostData.TypeDescription()
 			body.Required = true
-			body.Schema = ITypeToSwaggerSchema(api.PostData, []source.IType{})
+			body.Schema = m.swaggerSchemaConverter.ToSwaggerSchema(api.PostData, []source.IType{})
 
 			operation.Parameters = append(operation.Parameters, *body)
 		}
@@ -132,9 +137,9 @@ func (m *SwaggerSpec) parsePathApis(path string, apis []*ApiItem) (err error) {
 		if api.RespData != nil {
 			// wrap data for ginbuilder.HandleFunc
 			if api.ApiHandlerFuncType == ApiHandlerFuncTypeGinbuilderHandleFunc {
-				successResponse.Schema = ITypeToSwaggerSchema(SuccessResponseStructType(api.RespData), []source.IType{})
+				successResponse.Schema = m.swaggerSchemaConverter.ToSwaggerSchema(SuccessResponseStructType(api.RespData), []source.IType{})
 			} else {
-				successResponse.Schema = ITypeToSwaggerSchema(api.RespData, []source.IType{})
+				successResponse.Schema = m.swaggerSchemaConverter.ToSwaggerSchema(api.RespData, []source.IType{})
 			}
 		}
 
@@ -239,9 +244,15 @@ func (m *SwaggerSpec) Info(
 	return
 }
 
+// model definitions
+func (m *SwaggerSpec) setDefinitions() {
+	m.Swagger.Definitions = m.swaggerSchemaConverter.SwaggerDefinitions()
+	return
+}
+
 // save swagger spec to file
-func (m *SwaggerSpec) SaveToFile(fileName string) (err error) {
-	return m.Swagger.SaveFile(fileName)
+func (m *SwaggerSpec) SaveToFile(fileName string, pretty bool) (err error) {
+	return m.Swagger.SaveFile(fileName, pretty)
 }
 
 // 非body里声明的类型参数
@@ -301,14 +312,33 @@ func BasicTypeToSwaggerSchemaType(fieldType string) (swagType string) {
 	return
 }
 
-func ITypeToSwaggerSchema(
+type ITypeSwaggerSchemaConverter struct {
+	structSchemaMap map[*source.StructType]*spec.Schema
+	structDefIdMap  map[*source.StructType]string // struct_type -> swagger definition model id
+}
+
+func NewITypeSwaggerSchemaConverter() *ITypeSwaggerSchemaConverter {
+	return &ITypeSwaggerSchemaConverter{
+		structSchemaMap: map[*source.StructType]*spec.Schema{},
+		structDefIdMap:  map[*source.StructType]string{},
+	}
+}
+
+func (m *ITypeSwaggerSchemaConverter) ToSwaggerSchema(
 	iType source.IType,
-	fieldTypeStack []source.IType, // 字段类型解析栈. TODO 后续所有类型改成model引用
+	fieldTypeStack []source.IType, // 字段类型解析栈
 ) (
 	schema *spec.Schema,
 ) {
 	if fieldTypeStack == nil {
 		fieldTypeStack = make([]source.IType, 0)
+	}
+
+	switch t := iType.(type) {
+	case *source.StructType:
+		if t.Underlying != nil {
+			iType = t.Underlying // 使用内部的类
+		}
 	}
 
 	// 检查是否有循环引用的类型
@@ -334,49 +364,7 @@ func ITypeToSwaggerSchema(
 			return
 		}
 
-		schema.Required = make([]string, 0)
-		schema.Properties = make(map[string]spec.Schema)
-
-		for _, field := range structType.Fields {
-			if !field.Embedded && field.Exported { // 非嵌入的、公开访问的field
-				jsonName := field.TagJson()
-				fieldSchema := ITypeToSwaggerSchema(field.TypeSpec, subStack)
-				fieldSchema.Description = field.Description
-				if field.Required() {
-					fieldSchema.Required = []string{jsonName}
-				}
-
-				schema.Properties[jsonName] = *fieldSchema
-			}
-		}
-
-		for _, embeddedField := range structType.Embedded {
-			_, ok := embeddedField.TypeSpec.(*source.StructType)
-			if !ok {
-				continue
-			}
-
-			embeddedSchema := ITypeToSwaggerSchema(embeddedField.TypeSpec, subStack)
-			if embeddedSchema == nil {
-				logrus.Errorf("parse embedded struct type to swagger schema failed. embedded type: %s", embeddedField.TypeName)
-				continue
-			}
-
-			// required
-			schema.AddRequired(embeddedSchema.Required...)
-
-			// merge field
-			for fieldName, fieldSchema := range embeddedSchema.Properties {
-				_, ok := schema.Properties[fieldName]
-				if ok {
-					// TODO 临时关闭
-					//logrus.Warnf("conflict embedded struct field name. fieldName: %s, embedded struct: %s", fieldName, embeddedField.TypeName)
-					continue
-				}
-
-				schema.Properties[fieldName] = fieldSchema
-			}
-		}
+		schema = m.structTypeSwaggerSchema(structType, subStack)
 
 	case *source.MapType:
 		mapType := iType.(*source.MapType)
@@ -386,7 +374,7 @@ func ITypeToSwaggerSchema(
 		}
 
 		schema.AdditionalProperties = &spec.SchemaOrBool{}
-		schema.AdditionalProperties.Schema = ITypeToSwaggerSchema(mapType.ValueSpec, subStack)
+		schema.AdditionalProperties.Schema = m.ToSwaggerSchema(mapType.ValueSpec, subStack)
 
 	case *source.ArrayType:
 		arrayType := iType.(*source.ArrayType)
@@ -396,7 +384,7 @@ func ITypeToSwaggerSchema(
 		}
 
 		schema.Items = &spec.SchemaOrArray{}
-		schema.Items.Schema = ITypeToSwaggerSchema(arrayType.EltSpec, subStack)
+		schema.Items.Schema = m.ToSwaggerSchema(arrayType.EltSpec, subStack)
 
 	case *source.InterfaceType:
 		schema.Type = []string{"object"}
@@ -410,5 +398,84 @@ func ITypeToSwaggerSchema(
 		fmt.Println("unsupported itype for swagger schema")
 	}
 
+	return
+}
+
+func (m *ITypeSwaggerSchemaConverter) structTypeSwaggerSchema(
+	structType *source.StructType,
+	subStack []source.IType,
+) (refSchema *spec.Schema) {
+	// 查询是否已经生成过model
+	refSchema, ok := m.structSchemaMap[structType]
+	if ok {
+		return
+	}
+
+	schema := &spec.Schema{}
+	schema.Type = []string{"object"}
+	schema.Required = make([]string, 0)
+	schema.Properties = make(map[string]spec.Schema)
+
+	defer func() {
+		refSchema = &spec.Schema{}
+
+		defId := fmt.Sprintf("temp-%s", id.UniqueID())
+
+		refLink := fmt.Sprintf("#/definitions/%s", defId)
+		refSchema.Ref = spec.MustCreateRef(refLink)
+
+		m.structSchemaMap[structType] = schema
+		m.structDefIdMap[structType] = defId
+	}()
+
+	for _, field := range structType.Fields {
+		if !field.Embedded && field.Exported { // 非嵌入的、公开访问的field
+			jsonName := field.TagJson()
+			fieldSchema := m.ToSwaggerSchema(field.TypeSpec, subStack)
+			fieldSchema.Description = field.Description
+			if field.Required() {
+				fieldSchema.Required = []string{jsonName}
+			}
+
+			schema.Properties[jsonName] = *fieldSchema
+		}
+	}
+
+	for _, embeddedField := range structType.Embedded {
+		_, ok := embeddedField.TypeSpec.(*source.StructType)
+		if !ok {
+			continue
+		}
+
+		embeddedSchema := m.ToSwaggerSchema(embeddedField.TypeSpec, subStack)
+		if embeddedSchema == nil {
+			logrus.Errorf("parse embedded struct type to swagger schema failed. embedded type: %s", embeddedField.TypeName)
+			continue
+		}
+
+		// required
+		schema.AddRequired(embeddedSchema.Required...)
+
+		// merge field
+		for fieldName, fieldSchema := range embeddedSchema.Properties {
+			_, ok := schema.Properties[fieldName]
+			if ok {
+				logrus.Warnf("conflict embedded struct field name. fieldName: %s, embedded struct: %s", fieldName, embeddedField.TypeName)
+				continue
+			}
+
+			schema.Properties[fieldName] = fieldSchema
+		}
+	}
+
+	return
+}
+
+func (m *ITypeSwaggerSchemaConverter) SwaggerDefinitions() (definitions spec.Definitions) {
+	definitions = make(spec.Definitions)
+	for structType, schema := range m.structSchemaMap {
+		defId := m.structDefIdMap[structType]
+		definitions[defId] = *schema
+	}
 	return
 }

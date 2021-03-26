@@ -131,6 +131,7 @@ func ParseApis(
 
 	// api文件夹中所有的文件
 	subApiDir := make([]string, 0)
+	// TODO 需要优化。只需解析编译一次，不用每个目录都要解析编译
 	subApiDir, err = file.SearchFileNames(apiDir, func(fileInfo os.FileInfo) bool {
 		if fileInfo.IsDir() {
 			return true
@@ -410,8 +411,9 @@ func ParsePkgApis(
 		fileApis := make([]*ApiItem, 0)
 		fileName := astFileNames[astFile]
 
-		// skip *_test.go and routers.go
-		if strings.HasSuffix(fileName, "_test.go") || strings.HasSuffix(fileName, "/api/routers.go") {
+		// skip *test.go and routers.go
+		if strings.HasSuffix(fileName, "test.go") ||
+			strings.HasSuffix(fileName, "/api/routers.go") {
 			logrus.Infof("Skip parsing %s", fileName)
 			continue
 		}

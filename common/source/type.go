@@ -105,7 +105,8 @@ type StructType struct {
 	mField      map[string]*Field `json:"-" yaml:"-"`
 	Description string            `json:"description" yaml:"description"`
 
-	Underlying *StructType `json:"underlying" yaml:"underlying"` // 底层类。如果一个类被重新定义, type A B后，我们认为A、B类底层同属于B
+	//DeclPos    token.Pos   `json:"-" yaml:"-"` // 结构体声明位置
+	Underlying *StructType `json:"-" yaml:"-"` // 底层类。如果一个类被重新定义, type A B后，我们认为A、B类底层同属于B
 }
 
 func (m *StructType) TypeName() string {

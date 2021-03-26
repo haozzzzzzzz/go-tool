@@ -19,6 +19,7 @@ func GenerateSwaggerSpecification() *cobra.Command {
 	var notMod bool
 	var serviceName string
 	var serviceDescription string
+	var pretty bool
 
 	var cmd = &cobra.Command{
 		Use:   "swagger",
@@ -66,7 +67,7 @@ func GenerateSwaggerSpecification() *cobra.Command {
 			swaggerSpec.Apis(apis)
 			swaggerSpec.Schemes([]string{"http", "https"})
 			err = swaggerSpec.ParseApis()
-			err = swaggerSpec.SaveToFile(fmt.Sprintf("%s/swagger.json", outputDir))
+			err = swaggerSpec.SaveToFile(fmt.Sprintf("%s/swagger.json", outputDir), pretty)
 			if nil != err {
 				logrus.Errorf("save swagger spec to file failed. error: %s.", err)
 				return
@@ -89,6 +90,7 @@ func GenerateSwaggerSpecification() *cobra.Command {
 	flags.StringVarP(&contactName, "contact_name", "c", "", "contact name")
 	flags.BoolVarP(&notMod, "not_mod", "N", false, "not mod")
 	flags.StringVarP(&outputDir, "output", "o", "./", "doc output path")
+	flags.BoolVarP(&pretty, "pretty", "P", false, "pretty swagger.json output")
 
 	return cmd
 }

@@ -55,10 +55,14 @@ func (m *Swagger) Merge(otherSwagger *Swagger) {
 	}
 }
 
-func (m *Swagger) Output() (output []byte, err error) {
+func (m *Swagger) Output(pretty bool) (output []byte, err error) {
 	output, err = m.Swagger.MarshalJSON()
 	if nil != err {
 		logrus.Errorf("swagger marshal json failed. error: %s.", err)
+		return
+	}
+
+	if !pretty {
 		return
 	}
 
@@ -73,8 +77,8 @@ func (m *Swagger) Output() (output []byte, err error) {
 	return
 }
 
-func (m *Swagger) SaveFile(fileName string) (err error) {
-	out, err := m.Output()
+func (m *Swagger) SaveFile(fileName string, pretty bool) (err error) {
+	out, err := m.Output(pretty)
 	if nil != err {
 		logrus.Errorf("get spec output failed. error: %s.", err)
 		return
