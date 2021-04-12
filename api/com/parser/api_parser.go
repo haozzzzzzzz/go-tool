@@ -25,7 +25,9 @@ type ApiParser struct {
 	GoPaths    []string
 }
 
-func NewApiParser(serviceDir string) (apiParser *ApiParser, err error) {
+func NewApiParser(
+	serviceDir string,
+) (apiParser *ApiParser, err error) {
 	apiDir := fmt.Sprintf("%s/api", serviceDir)
 
 	if file.PathExists(apiDir) {
