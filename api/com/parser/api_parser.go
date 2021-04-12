@@ -27,16 +27,18 @@ type ApiParser struct {
 
 func NewApiParser(
 	serviceDir string,
+	apiDir string, // 指定api目录
 ) (apiParser *ApiParser, err error) {
-	apiDir := fmt.Sprintf("%s/api", serviceDir)
+	if apiDir == "" { // 如果不指定，则默认为当前目录下的api目录
+		apiDir = fmt.Sprintf("%s/api", serviceDir)
+	}
 
-	if file.PathExists(apiDir) {
+	if !file.PathExists(apiDir) {
 		err = os.MkdirAll(apiDir, source.ProjectDirMode)
 		if nil != err {
 			logrus.Errorf("mkdir %s failed. error: %s.", apiDir, err)
 			return
 		}
-
 	}
 
 	goPath := os.Getenv("GOPATH")
