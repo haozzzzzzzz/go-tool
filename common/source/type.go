@@ -40,12 +40,50 @@ func NewBasicType(name string) *BasicType {
 	}
 }
 
+type TagsMap map[string]string
+
+func (m TagsMap) ApiDoc() (parts []string) {
+	parts = make([]string, 0)
+	if m == nil {
+		return
+	}
+
+	str := m["api_doc"]
+	if str == "" {
+		return
+	}
+
+	tempParts := strings.Split(str, ",")
+	for _, part := range tempParts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		parts = append(parts, part)
+	}
+
+	return
+}
+
+// 是否跳过api文档生成
+func (m TagsMap) HasApiDocSkip() (isSkip bool) {
+	parts := m.ApiDoc()
+	for _, part := range parts {
+		if part == "skip" {
+			isSkip = true
+			return
+		}
+	}
+	return
+}
+
 // struct field
 type Field struct {
-	Name     string            `json:"name" yaml:"name"` // field name
-	TypeName string            `json:"type_name" yaml:"type_name"`
-	Tags     map[string]string `json:"tags" yaml:"tags"`
-	TypeSpec IType             `json:"type_spec" yaml:"type_spec"`
+	Name     string  `json:"name" yaml:"name"` // field name
+	TypeName string  `json:"type_name" yaml:"type_name"`
+	Tags     TagsMap `json:"tags" yaml:"tags"`
+	TypeSpec IType   `json:"type_spec" yaml:"type_spec"`
 
 	Exported bool `json:"exported" yaml:"exported"` // 是否是公开访问的。embedded类型为false
 

@@ -434,6 +434,10 @@ func (m *ITypeSwaggerSchemaConverter) structTypeSwaggerSchema(
 	}()
 
 	for _, field := range structType.Fields {
+		if field.Tags.HasApiDocSkip() {
+			continue
+		}
+
 		if !field.Embedded && field.Exported { // 非嵌入的、公开访问的field
 			jsonName := field.TagJson()
 			fieldSchema := m.ToSwaggerSchema(field.TypeSpec, subStack)
@@ -447,6 +451,10 @@ func (m *ITypeSwaggerSchemaConverter) structTypeSwaggerSchema(
 	}
 
 	for _, embeddedField := range structType.Embedded {
+		if embeddedField.Tags.HasApiDocSkip() {
+			return
+		}
+
 		_, ok := embeddedField.TypeSpec.(*source.StructType)
 		if !ok {
 			continue
