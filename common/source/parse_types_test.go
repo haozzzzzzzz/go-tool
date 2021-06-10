@@ -8,7 +8,7 @@ import (
 
 func TestParseTypes(t *testing.T) {
 	dir := "/Users/hao/Documents/Projects/Go/ws_doc/test1"
-	parsedTypes, parsedVals, err := Parse(dir)
+	_, parsedTypes, parsedVals, err := Parse(dir)
 	if err != nil {
 		t.Error(err)
 		return

@@ -42,7 +42,15 @@ func NewBasicType(name string) *BasicType {
 
 type TagsMap map[string]string
 
-func (m TagsMap) ApiDoc() (parts []string) {
+type ApiDocTagAttributes struct {
+	Skip    bool   `json:"skip"`
+	StrType string `json:"str_type"`
+}
+
+func (m TagsMap) ApiDoc() (
+	parts []string,
+	attributes ApiDocTagAttributes,
+) {
 	parts = make([]string, 0)
 	if m == nil {
 		return
@@ -61,6 +69,12 @@ func (m TagsMap) ApiDoc() (parts []string) {
 		}
 
 		parts = append(parts, part)
+		switch {
+		case part == "skip":
+			attributes.Skip = true
+		case strings.HasPrefix(part, "type="):
+			attributes.StrType = strings.TrimLeft(part, "type=")
+		}
 	}
 
 	return
@@ -68,13 +82,8 @@ func (m TagsMap) ApiDoc() (parts []string) {
 
 // 是否跳过api文档生成
 func (m TagsMap) HasApiDocSkip() (isSkip bool) {
-	parts := m.ApiDoc()
-	for _, part := range parts {
-		if part == "skip" {
-			isSkip = true
-			return
-		}
-	}
+	_, attributes := m.ApiDoc()
+	isSkip = attributes.Skip
 	return
 }
 

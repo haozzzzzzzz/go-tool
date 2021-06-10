@@ -396,14 +396,23 @@ func (m *ITypeSwaggerSchemaConverter) ToSwaggerSchema(
 
 	case *source.BasicType:
 		basicType := iType.(*source.BasicType)
-		schemaType := BasicTypeToSwaggerSchemaType(basicType.Name)
-		schema.Type = []string{schemaType}
+		//schemaType := BasicTypeToSwaggerSchemaType(basicType.Name)
+		//schema.Type = []string{schemaType}
+		schema = NewBasicSwaggerSchema(basicType.Name)
 
 	default:
 		fmt.Println("unsupported itype for swagger schema")
 
 	}
 
+	return
+}
+
+func NewBasicSwaggerSchema(basicTypeName string) (schema *spec.Schema) {
+	schema = &spec.Schema{}
+	schema.Type = []string{
+		BasicTypeToSwaggerSchemaType(basicTypeName),
+	}
 	return
 }
 
@@ -433,25 +442,38 @@ func (m *ITypeSwaggerSchemaConverter) structTypeSwaggerSchema(
 		m.structDefIdMap[structType] = defId
 	}()
 
+	// 自身扩展字段
 	for _, field := range structType.Fields {
-		if field.Tags.HasApiDocSkip() {
+		_, apiDocTags := field.Tags.ApiDoc()
+		if apiDocTags.Skip {
 			continue
 		}
 
-		if !field.Embedded && field.Exported { // 非嵌入的、公开访问的field
-			jsonName := field.TagJson()
-			fieldSchema := m.ToSwaggerSchema(field.TypeSpec, subStack)
-			fieldSchema.Description = field.Description
-			if field.Required() {
-				fieldSchema.Required = []string{jsonName}
-			}
-
-			schema.Properties[jsonName] = *fieldSchema
+		if field.Embedded || !field.Exported {
+			continue
 		}
+
+		// 非嵌入的、公开访问的field
+		jsonName := field.TagJson()
+		var fieldSchema *spec.Schema
+		if apiDocTags.StrType != "" {
+			fieldSchema = NewBasicSwaggerSchema(apiDocTags.StrType)
+		} else {
+			fieldSchema = m.ToSwaggerSchema(field.TypeSpec, subStack)
+		}
+
+		fieldSchema.Description = field.Description
+		if field.Required() {
+			fieldSchema.Required = []string{jsonName}
+		}
+
+		schema.Properties[jsonName] = *fieldSchema
 	}
 
+	// 内嵌对象字段
 	for _, embeddedField := range structType.Embedded {
-		if embeddedField.Tags.HasApiDocSkip() {
+		_, apiDocTags := embeddedField.Tags.ApiDoc()
+		if apiDocTags.Skip { // 跳过字段
 			return
 		}
 
@@ -460,7 +482,13 @@ func (m *ITypeSwaggerSchemaConverter) structTypeSwaggerSchema(
 			continue
 		}
 
-		embeddedSchema := m.ToSwaggerSchema(embeddedField.TypeSpec, subStack)
+		var embeddedSchema *spec.Schema
+		if apiDocTags.StrType != "" {
+			embeddedSchema = NewBasicSwaggerSchema(apiDocTags.StrType)
+		} else {
+			embeddedSchema = m.ToSwaggerSchema(embeddedField.TypeSpec, subStack)
+		}
+
 		if embeddedSchema == nil {
 			logrus.Errorf("parse embedded struct type to swagger schema failed. embedded type: %s", embeddedField.TypeName)
 			continue
