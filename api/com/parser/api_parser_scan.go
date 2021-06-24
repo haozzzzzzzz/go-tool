@@ -4,8 +4,6 @@ import (
 	"github.com/haozzzzzzzz/go-rapid-development/v2/utils/uerrors"
 	"github.com/haozzzzzzzz/go-tool/common/source/mod"
 	"go/ast"
-	"go/importer"
-	"go/parser"
 	"go/token"
 	"go/types"
 	"golang.org/x/tools/go/packages"
@@ -13,8 +11,6 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"sort"
-
-	"fmt"
 
 	"strings"
 
@@ -25,7 +21,6 @@ import (
 func (m *ApiParser) ScanApis(
 	parseRequestData bool, // 如果parseRequestData会有点慢
 	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
-	usePackagesParse bool, // use Packages or Parser, gomod使用package，gopath使用parser
 ) (
 	commonApiParamsMap map[string]*ApiItemParams, // dir -> common params
 	apis []*ApiItem,
@@ -38,7 +33,7 @@ func (m *ApiParser) ScanApis(
 		return
 	}
 
-	commonApiParamsMap, apis, err = ParseApis(apiDir, parseRequestData, parseCommentText, usePackagesParse)
+	commonApiParamsMap, apis, err = ParseApis(apiDir, parseRequestData, parseCommentText)
 	if nil != err {
 		logrus.Errorf("parse apis from code failed. error: %s.", err)
 		return
@@ -74,7 +69,10 @@ func (m *ApiParser) ScanApis(
 	uriKeyExistsMap := make(map[string]*ApiItem)
 	mapApi := make(map[string]*ApiItem)
 	for _, oneApi := range apis {
-		if oneApi.RelativePaths == nil || len(oneApi.RelativePaths) == 0 || oneApi.HttpMethod == "" { // required relative paths and http method
+		// required relative paths and http method
+		if oneApi.RelativePaths == nil ||
+			len(oneApi.RelativePaths) == 0 ||
+			oneApi.HttpMethod == "" {
 			logrus.Warnf("api need to declare relative paths and http method. func name: %s", oneApi.ApiHandlerFunc)
 			continue
 		}
@@ -114,7 +112,6 @@ func ParseApis(
 	apiDir string,
 	parseRequestData bool, // 如果parseRequestData会有点慢
 	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
-	userPackageParse bool, // parseRequestData=true时，生效
 ) (
 	commonParamsMap map[string]*ApiItemParams, // file dir -> api item params
 	apis []*ApiItem,
@@ -144,8 +141,7 @@ func ParseApis(
 
 	// 服务源文件，只能一个pkg一个pkg地解析
 	for _, subApiDir := range subApiDir {
-
-		subCommonParamses, subApis, errParse := ParsePkgApis(apiDir, subApiDir, userPackageParse, parseRequestData, parseCommentText)
+		subCommonParamsList, subApis, errParse := ParsePkgApis(apiDir, subApiDir, parseRequestData, parseCommentText)
 		err = errParse
 		if nil != err {
 			logrus.Errorf("parse api file dir %q failed. error: %s.", subApiDir, err)
@@ -154,7 +150,7 @@ func ParseApis(
 
 		apis = append(apis, subApis...)
 
-		for _, subCommonParams := range subCommonParamses {
+		for _, subCommonParams := range subCommonParamsList {
 			_, ok := commonParamsMap[subApiDir]
 			if !ok {
 				commonParamsMap[subApiDir] = subCommonParams
@@ -204,7 +200,6 @@ func mergeTypesInfos(info *types.Info, infos ...*types.Info) {
 func ParsePkgApis(
 	apiRootDir string,
 	apiPackageDir string,
-	usePackagesParse bool, // use Packages or Parser
 	parseRequestData bool,
 	parseCommentText bool, // 是否从注释中提取api。`compile`不能从注释中生成routers
 ) (
@@ -231,22 +226,10 @@ func ParsePkgApis(
 		return
 	}
 
-	goPaths := make([]string, 0)
-	var goModName, goModDir string
-
-	if !usePackagesParse {
-		goPaths = strings.Split(os.Getenv("GOPATH"), ":")
-		if len(goPaths) == 0 {
-			err = uerrors.Newf("failed to find go paths")
-			return
-		}
-
-	} else {
-		_, goModName, goModDir = mod.FindGoMod(apiPackageDir)
-		if goModName == "" || goModDir == "" {
-			err = uerrors.Newf("failed to find go mod")
-			return
-		}
+	_, goModName, goModDir := mod.FindGoMod(apiPackageDir)
+	if goModName == "" || goModDir == "" {
+		err = uerrors.Newf("failed to find go mod")
+		return
 	}
 
 	// 检索当前目录下所有的文件，不包含import的子文件
@@ -266,143 +249,60 @@ func ParsePkgApis(
 
 	fileSet := token.NewFileSet()
 
-	if !usePackagesParse { // not use mod
-		parseMode := parser.AllErrors | parser.ParseComments
-		astPkgMap, errParse := parser.ParseDir(fileSet, apiPackageDir, nil, parseMode)
-		err = errParse
-		if nil != err {
-			logrus.Errorf("parser parse dir failed. error: %s.", err)
-			return
-		}
-		_ = astPkgMap
+	mode := packages.NeedName |
+		packages.NeedFiles |
+		packages.NeedCompiledGoFiles |
+		packages.NeedImports |
+		packages.NeedDeps |
+		packages.NeedExportsFile |
+		packages.NeedTypes |
+		packages.NeedSyntax |
+		packages.NeedTypesInfo |
+		packages.NeedTypesSizes
+	pkgs, errLoad := packages.Load(&packages.Config{
+		Mode: mode,
+		Dir:  apiPackageDir,
+		Fset: fileSet,
+	})
+	err = errLoad
+	if nil != err {
+		logrus.Errorf("go/packages load failed. error: %s.", err)
+		return
+	}
 
-		astFileMap := make(map[string]*ast.File)
-		for pkgName, astPkg := range astPkgMap {
-			_ = pkgName
-			for fileName, pkgFile := range astPkg.Files {
-				astFiles = append(astFiles, pkgFile)
-				astFileNames[pkgFile] = fileName
-				astFileMap[fileName] = pkgFile
-			}
+	// only one package
+	pkgPath := make(map[string]bool)
+	impPkgPaths := make(map[string]bool)
+	for _, pkg := range pkgs {
+		_, ok := pkgPath[pkg.PkgPath]
+		if ok {
+			continue
 		}
 
+		pkgPath[pkg.PkgPath] = true
+
+		// 合并types.Info
+		for _, astFile := range pkg.Syntax {
+			fileName := pkg.Fset.File(astFile.Pos()).Name()
+			astFiles = append(astFiles, astFile)
+			astFileNames[astFile] = fileName
+		}
+
+		// 包内的类型
+		mergeTypesInfos(typesInfo, pkg.TypesInfo)
+
+		// 解析请求结构
 		if parseRequestData {
-			// parse types
-			typesConf := types.Config{
-				//Importer: importer.Default(),
-			}
-
-			typesConf.Importer = importer.For("source", nil)
-
-			// cur package
-			pkg, errCheck := typesConf.Check(apiPackageDir, fileSet, astFiles, typesInfo)
-			err = errCheck
-			if nil != err {
-				logrus.Errorf("check types failed. error: %s.", err)
-				return
-			}
-			_ = pkg
-
-			// imported
-			impPaths := make(map[string]bool)
-			for fileName, pkgFile := range astFileMap { // only parse first level of imported
-				_ = fileName
-				for _, fileImport := range pkgFile.Imports {
-					impPath := strings.Replace(fileImport.Path.Value, "\"", "", -1)
-					for _, goPath := range goPaths {
-						absPath := fmt.Sprintf("%s/src/%s", goPath, impPath)
-						if file.PathExists(absPath) {
-							impPaths[absPath] = true
-						}
-					}
-				}
-			}
-
-			// parse ast files and types
-			for impPath, _ := range impPaths {
-				tempFileSet := token.NewFileSet()
-				tempAstFiles := make([]*ast.File, 0)
-
-				tempPkgs, errParse := parser.ParseDir(tempFileSet, impPath, nil, parseMode)
-				err = errParse
-				if nil != err {
-					logrus.Errorf("parser parse dir failed. error: %s.", err)
-					return
+			for _, impPkg := range pkg.Imports { // 依赖
+				_, ok := impPkgPaths[impPkg.PkgPath]
+				if ok {
+					continue
 				}
 
-				for pkgName, pkg := range tempPkgs {
-					_ = pkgName
-					for _, pkgFile := range pkg.Files {
-						tempAstFiles = append(tempAstFiles, pkgFile)
-					}
-				}
+				impPkgPaths[impPkg.PkgPath] = true
 
-				// type check imported path
-				_, err = typesConf.Check(impPath, tempFileSet, tempAstFiles, typesInfo)
-				if nil != err {
-					logrus.Errorf("check imported package failed. path: %s, error: %s.", impPath, err)
-					return
-				}
-
-			}
-
-		}
-
-	} else { // use go mod
-		mode := packages.NeedName |
-			packages.NeedFiles |
-			packages.NeedCompiledGoFiles |
-			packages.NeedImports |
-			packages.NeedDeps |
-			packages.NeedExportsFile |
-			packages.NeedTypes |
-			packages.NeedSyntax |
-			packages.NeedTypesInfo |
-			packages.NeedTypesSizes
-		pkgs, errLoad := packages.Load(&packages.Config{
-			Mode: mode,
-			Dir:  apiPackageDir,
-			Fset: fileSet,
-		})
-		err = errLoad
-		if nil != err {
-			logrus.Errorf("go/packages load failed. error: %s.", err)
-			return
-		}
-
-		// only one package
-		pkgPath := make(map[string]bool)
-		impPkgPaths := make(map[string]bool)
-		for _, pkg := range pkgs {
-			_, ok := pkgPath[pkg.PkgPath]
-			if ok {
-				continue
-			}
-
-			pkgPath[pkg.PkgPath] = true
-
-			// 合并types.Info
-			for _, astFile := range pkg.Syntax {
-				fileName := pkg.Fset.File(astFile.Pos()).Name()
-				astFiles = append(astFiles, astFile)
-				astFileNames[astFile] = fileName
-			}
-
-			// 包内的类型
-			mergeTypesInfos(typesInfo, pkg.TypesInfo)
-
-			if parseRequestData {
-				for _, impPkg := range pkg.Imports { // 依赖
-					_, ok := impPkgPaths[impPkg.PkgPath]
-					if ok {
-						continue
-					}
-
-					impPkgPaths[impPkg.PkgPath] = true
-
-					// 包引用的包的类型，目前只解析一层
-					mergeTypesInfos(typesInfo, impPkg.TypesInfo)
-				}
+				// 包引用的包的类型，目前只解析一层
+				mergeTypesInfos(typesInfo, impPkg.TypesInfo)
 			}
 		}
 	}
@@ -434,30 +334,9 @@ func ParsePkgApis(
 			pkgRelAlias = strings.Replace(pkgRelDir, "/", "_", -1)
 		}
 
-		// package exported path
-		if !usePackagesParse { // 使用GOPATH
-			foundInGoPath := false
-
-			for _, subGoPath := range goPaths {
-				if strings.Contains(fileDir, subGoPath) {
-					foundInGoPath = true
-
-					// 在此gopath下
-					pkgExportedPath = strings.Replace(fileDir, subGoPath+"/src/", "", -1)
-					break
-				}
-			}
-
-			if !foundInGoPath {
-				err = uerrors.Newf("failed to find file in go path. file: %s", fileName)
-				return
-			}
-
-		} else { // 使用GOMOD
-			pkgRelModPath := strings.ReplaceAll(fileDir, goModDir, "")
-			pkgExportedPath = goModName + pkgRelModPath
-
-		}
+		// 使用GOMOD
+		pkgRelModPath := strings.ReplaceAll(fileDir, goModDir, "")
+		pkgExportedPath = goModName + pkgRelModPath
 
 		apiFile := NewApiFile()
 		apiFile.SourceFile = fileName

@@ -14,7 +14,6 @@ func CommandApiCompile() *cobra.Command {
 	var serviceDir string
 	var apiDir string // 指定解析的接口目录. 如果不指定，则默认为{serviceDir}/api
 
-	var notMod bool
 	var cmd = &cobra.Command{
 		Use:   "compile",
 		Short: "api service compilation",
@@ -51,7 +50,7 @@ func CommandApiCompile() *cobra.Command {
 				return
 			}
 
-			_, apis, err := apiParser.ScanApis(false, false, !notMod)
+			_, apis, err := apiParser.ScanApis(false, false)
 			if nil != err {
 				logrus.Errorf("Scan api failed. %s.", err)
 				return
@@ -69,7 +68,6 @@ func CommandApiCompile() *cobra.Command {
 	flags := cmd.Flags()
 	flags.StringVarP(&serviceDir, "path", "p", "./", "service path")
 	flags.StringVarP(&apiDir, "api_dir", "a", "./api", "api dir")
-	flags.BoolVarP(&notMod, "not_mod", "n", false, "not mod")
 
 	return cmd
 }

@@ -57,7 +57,7 @@ func GenerateSwaggerSpecification() *cobra.Command {
 				return
 			}
 
-			_, apis, err := apiParser.ScanApis(true, true, !notMod)
+			_, apis, err := apiParser.ScanApis(true, true)
 			if nil != err {
 				logrus.Errorf("Scan api failed. err: %s.", err)
 				return

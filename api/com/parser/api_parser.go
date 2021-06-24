@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/haozzzzzzzz/go-rapid-development/v2/utils/file"
 	"github.com/haozzzzzzzz/go-tool/common/source"
-	"strings"
 
 	"os"
 
@@ -14,7 +13,6 @@ import (
 type ApiParser struct {
 	ServiceDir string // 服务根目录
 	ApiDir     string // 服务下api目录. api_dir和service_dir可以一样
-	GoPaths    []string
 }
 
 func NewApiParser(
@@ -33,23 +31,18 @@ func NewApiParser(
 		}
 	}
 
-	goPath := os.Getenv("GOPATH")
-
 	apiParser = &ApiParser{
 		ServiceDir: serviceDir,
 		ApiDir:     apiDir,
-		GoPaths:    strings.Split(goPath, ":"),
 	}
 
 	return
 }
 
 func NewApiParserSpecify(apiDir string) (apiParser *ApiParser, err error) {
-	goPath := os.Getenv("GOPATH")
 	apiParser = &ApiParser{
 		ServiceDir: apiDir,
 		ApiDir:     apiDir,
-		GoPaths:    strings.Split(goPath, ":"),
 	}
 	return
 }
