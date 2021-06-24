@@ -197,6 +197,12 @@ func mergeTypesInfos(info *types.Info, infos ...*types.Info) {
 	return
 }
 
+// SkipFileNameSuffixes skip files with suffix
+var SkipFileNameSuffixes = []string{
+	"test.go",
+	"/api/routers.go",
+}
+
 func ParsePkgApis(
 	apiRootDir string,
 	apiPackageDir string,
@@ -312,8 +318,15 @@ func ParsePkgApis(
 		fileName := astFileNames[astFile]
 
 		// skip *test.go and routers.go
-		if strings.HasSuffix(fileName, "test.go") ||
-			strings.HasSuffix(fileName, "/api/routers.go") {
+		needSkip := false
+		for _, suffix := range SkipFileNameSuffixes {
+			if strings.HasSuffix(fileName, suffix) {
+				needSkip = true
+				break
+			}
+		}
+
+		if needSkip {
 			logrus.Infof("Skip parsing %s", fileName)
 			continue
 		}
