@@ -40,7 +40,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/haozzzzzzzz/go-rapid-development/web/ginbuilder"
+	"github.com/haozzzzzzzz/go-rapid-development/v2/web/ginbuilder"
 )
 
 var {{.ApiHandlerFunc}} ginbuilder.HandleFunc = ginbuilder.HandleFunc{

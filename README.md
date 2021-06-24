@@ -7,6 +7,13 @@ A toolkit for go coding
 - ws: websocket protocol tool
 
 ## api tool
+### command
+```shell
+api --help # see help
+api compile --help # see compile help
+api swagger --help # see generate doc help
+```
+
 ### api doc json tags
 Add api doc tags in struct field tags for specified functions, use `,`to split keys in same tag.
 example:

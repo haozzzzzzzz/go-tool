@@ -1,7 +1,7 @@
 package parse
 
 import (
-	"github.com/haozzzzzzzz/go-rapid-development/utils/ujson"
+	"github.com/haozzzzzzzz/go-rapid-development/v2/utils/ujson"
 	"github.com/haozzzzzzzz/go-tool/common/source"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"

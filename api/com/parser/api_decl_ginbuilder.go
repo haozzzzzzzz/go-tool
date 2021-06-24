@@ -4,14 +4,19 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-playground/validator"
-	request "github.com/haozzzzzzzz/go-rapid-development/api/request"
+	request "github.com/haozzzzzzzz/go-rapid-development/v2/api/request"
 	"github.com/sirupsen/logrus"
 	"go/ast"
 	"go/types"
 	"strings"
 )
 
-// 解析ginbuilder
+/*
+parse ginbuilder style api
+https://github.com/haozzzzzzzz/go-rapid-development/v2/tree/master/web/ginbuilder
+*/
+
+// CheckGinbuilderHandlerFuncDecl 解析ginbuilder
 func CheckGinbuilderHandlerFuncDecl(
 	decl ast.Decl,
 	typesInfo *types.Info,
@@ -70,8 +75,8 @@ func CheckGinbuilderHandlerFuncDecl(
 	return
 }
 
-// 解析ginbuilder.HandleFunc
-// https://github.com/haozzzzzzzz/go-rapid-development/tree/master/web/ginbuilder
+// ParseGinbuilderHandleFuncApi 解析ginbuilder.HandleFunc
+// https://github.com/haozzzzzzzz/go-rapid-development/v2/tree/master/web/ginbuilder
 func ParseGinbuilderHandleFuncApi(
 	apiItem *ApiItem,
 	genDel *ast.GenDecl,

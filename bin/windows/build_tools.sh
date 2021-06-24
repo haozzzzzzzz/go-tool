@@ -10,7 +10,7 @@ go build -o api.exe ../../api/main.go
 go build -o code.exe ../../code/main.go
 
 ## log formatter
-#go build -o logfmt ${GOPATH}/src/github.com/haozzzzzzzz/go-rapid-development/tools/logfmt/main.go
+#go build -o logfmt ${GOPATH}/src/github.com/haozzzzzzzz/go-rapid-development/v2/tools/logfmt/main.go
 #
 ## lambda build
 #go build -o lamb ${GOPATH}/src/github.com/haozzzzzzzz/go-lambda/tools/lamb/main.go

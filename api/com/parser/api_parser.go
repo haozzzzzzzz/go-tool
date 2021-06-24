@@ -6,9 +6,9 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 
-	"github.com/haozzzzzzzz/go-rapid-development/api/request"
-	"github.com/haozzzzzzzz/go-rapid-development/utils/file"
-	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
+	"github.com/haozzzzzzzz/go-rapid-development/v2/api/request"
+	"github.com/haozzzzzzzz/go-rapid-development/v2/utils/file"
+	"github.com/haozzzzzzzz/go-rapid-development/v2/utils/uerrors"
 
 	"github.com/haozzzzzzzz/go-tool/lib/gofmt"
 

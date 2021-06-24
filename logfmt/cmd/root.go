@@ -16,7 +16,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/haozzzzzzzz/go-rapid-development/utils/ujson"
+	"github.com/haozzzzzzzz/go-rapid-development/v2/utils/ujson"
 	"github.com/sirupsen/logrus"
 	"os"
 

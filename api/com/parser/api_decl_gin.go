@@ -7,6 +7,11 @@ import (
 	"go/types"
 )
 
+/**
+parse gin style api
+https://github.com/gin-gonic/gin
+*/
+
 func CheckGinHandlerFuncDecl(
 	decl ast.Decl,
 	typesInfo *types.Info,

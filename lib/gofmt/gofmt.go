@@ -3,8 +3,8 @@ package gofmt
 import (
 	"errors"
 	"fmt"
-	"github.com/haozzzzzzzz/go-rapid-development/cmd"
-	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
+	"github.com/haozzzzzzzz/go-rapid-development/v2/cmd"
+	"github.com/haozzzzzzzz/go-rapid-development/v2/utils/uerrors"
 	"github.com/sirupsen/logrus"
 	"go/format"
 	"os"

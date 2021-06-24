@@ -16,7 +16,7 @@ func init() {
 	}
 }
 
-// 解析Api类型声明
+// ApiDeclParseFunc 解析Api类型声明
 type ApiDeclParseFunc func(
 	decl ast.Decl,
 	typesInfo *types.Info,

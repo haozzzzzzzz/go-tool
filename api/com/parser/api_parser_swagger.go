@@ -10,7 +10,7 @@ import (
 	"fmt"
 
 	"github.com/go-openapi/spec"
-	"github.com/haozzzzzzzz/go-rapid-development/api/request"
+	"github.com/haozzzzzzzz/go-rapid-development/v2/api/request"
 	"github.com/haozzzzzzzz/go-tool/lib/lswagger"
 	"github.com/sirupsen/logrus"
 )

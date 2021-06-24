@@ -1,7 +1,7 @@
 package doc
 
 import (
-	"github.com/haozzzzzzzz/go-rapid-development/utils/ujson"
+	"github.com/haozzzzzzzz/go-rapid-development/v2/utils/ujson"
 	"github.com/haozzzzzzzz/go-tool/common/source"
 	"github.com/haozzzzzzzz/go-tool/ws/parse"
 	"github.com/sirupsen/logrus"

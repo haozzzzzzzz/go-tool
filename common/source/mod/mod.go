@@ -2,7 +2,7 @@ package mod
 
 import (
 	"bufio"
-	"github.com/haozzzzzzzz/go-rapid-development/utils/file"
+	"github.com/haozzzzzzzz/go-rapid-development/v2/utils/file"
 	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"

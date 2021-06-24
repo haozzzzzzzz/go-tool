@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/gosexy/to"
-	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
+	"github.com/haozzzzzzzz/go-rapid-development/v2/utils/uerrors"
 	"github.com/haozzzzzzzz/go-tool/common/source"
 	"github.com/haozzzzzzzz/go-tool/lib/gofmt"
 	"github.com/sirupsen/logrus"

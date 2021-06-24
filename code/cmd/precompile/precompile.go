@@ -3,7 +3,7 @@ package precompile
 import (
 	"errors"
 	"fmt"
-	yaml2 "github.com/haozzzzzzzz/go-rapid-development/utils/yaml"
+	yaml2 "github.com/haozzzzzzzz/go-rapid-development/v2/utils/yaml"
 	"github.com/haozzzzzzzz/go-tool/code/com/precompiler"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

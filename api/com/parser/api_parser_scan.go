@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"github.com/haozzzzzzzz/go-rapid-development/utils/uerrors"
+	"github.com/haozzzzzzzz/go-rapid-development/v2/utils/uerrors"
 	"github.com/haozzzzzzzz/go-tool/common/source/mod"
 	"go/ast"
 	"go/importer"
@@ -18,7 +18,7 @@ import (
 
 	"strings"
 
-	"github.com/haozzzzzzzz/go-rapid-development/utils/file"
+	"github.com/haozzzzzzzz/go-rapid-development/v2/utils/file"
 	"github.com/sirupsen/logrus"
 )
 
