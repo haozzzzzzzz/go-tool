@@ -463,8 +463,15 @@ func parseStringTagParts(strTag string) (mParts map[string]string) {
 			continue
 		}
 
-		tagPair := strings.Split(pair, ":")
-		mParts[tagPair[0]] = strings.Replace(tagPair[1], "\"", "", -1)
+		separateIndex := strings.Index(pair, ":")
+		if separateIndex < 0 || separateIndex == len(pair)-1 {
+			continue
+		}
+
+		key := pair[:separateIndex]
+		value := pair[separateIndex+1:]
+
+		mParts[key] = strings.Replace(value, "\"", "", -1)
 	}
 	return
 
