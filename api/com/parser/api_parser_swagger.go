@@ -463,6 +463,7 @@ func (m *ITypeSwaggerSchemaConverter) structTypeSwaggerSchema(
 
 		fieldSchema.Description = field.Description
 		if field.Required() {
+			// declare required field to object
 			schema.Required = append(schema.Required, jsonName)
 		}
 
