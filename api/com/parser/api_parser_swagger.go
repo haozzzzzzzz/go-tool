@@ -463,7 +463,6 @@ func (m *ITypeSwaggerSchemaConverter) structTypeSwaggerSchema(
 
 		fieldSchema.Description = field.Description
 		if field.Required() {
-			fieldSchema.Description = fmt.Sprintf("(required) %s", field.Description) // body里的字段，将required加入到描述
 			schema.Required = append(schema.Required, jsonName)
 		}
 
