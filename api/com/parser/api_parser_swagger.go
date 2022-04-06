@@ -396,8 +396,6 @@ func (m *ITypeSwaggerSchemaConverter) ToSwaggerSchema(
 
 	case *source.BasicType:
 		basicType := iType.(*source.BasicType)
-		//schemaType := BasicTypeToSwaggerSchemaType(basicType.Name)
-		//schema.Type = []string{schemaType}
 		schema = NewBasicSwaggerSchema(basicType.Name)
 
 	default:
@@ -416,6 +414,7 @@ func NewBasicSwaggerSchema(basicTypeName string) (schema *spec.Schema) {
 	return
 }
 
+// translate struct type to swagger's object definition schema
 func (m *ITypeSwaggerSchemaConverter) structTypeSwaggerSchema(
 	structType *source.StructType,
 	subStack []source.IType,
@@ -428,7 +427,7 @@ func (m *ITypeSwaggerSchemaConverter) structTypeSwaggerSchema(
 
 	schema := &spec.Schema{}
 	schema.Type = []string{"object"}
-	schema.Required = make([]string, 0)
+	schema.Required = make([]string, 0) // object sub required field
 	schema.Properties = make(map[string]spec.Schema)
 
 	defer func() {
@@ -464,7 +463,8 @@ func (m *ITypeSwaggerSchemaConverter) structTypeSwaggerSchema(
 
 		fieldSchema.Description = field.Description
 		if field.Required() {
-			fieldSchema.Required = []string{jsonName}
+			fieldSchema.Description = fmt.Sprintf("(required) %s", field.Description) // body里的字段，将required加入到描述
+			schema.Required = append(schema.Required, jsonName)
 		}
 
 		schema.Properties[jsonName] = *fieldSchema
