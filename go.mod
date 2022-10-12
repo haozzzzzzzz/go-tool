@@ -1,6 +1,6 @@
 module github.com/haozzzzzzzz/go-tool
 
-go 1.19
+go 1.18
 
 // 如果发现编译器过时，导致编译代码异常
 // 这时候只需要更新 golang.org/x/tools
