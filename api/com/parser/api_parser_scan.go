@@ -150,6 +150,7 @@ func ParseApis(
 
 	// 服务源文件，只能一个pkg一个pkg地解析
 	for _, subApiDir := range subApiDirs {
+		logrus.Infof("parse package %s", subApiDir)
 		subCommonParamsList, subApis, errParse := ParsePkgApis(apiDir, subApiDir, parseRequestData, parseCommentText)
 		err = errParse
 		if nil != err {
@@ -274,7 +275,7 @@ func ParsePkgApis(
 		packages.NeedCompiledGoFiles |
 		packages.NeedImports |
 		packages.NeedDeps |
-		packages.NeedExportsFile |
+		//packages.NeedExportFile |
 		packages.NeedTypes |
 		packages.NeedSyntax |
 		packages.NeedTypesInfo |
@@ -293,11 +294,12 @@ func ParsePkgApis(
 		return
 	}
 
+	//logrus.Infof("load packages : %s, pkgs: %+v", apiPackageDir, pkgs)
+
 	// only one package
 	pkgPath := make(map[string]bool)
 	impPkgPaths := make(map[string]bool)
 	for _, pkg := range pkgs {
-		//fmt.Println(apiPackageDir, pkg)
 
 		_, ok := pkgPath[pkg.PkgPath]
 		if ok {
