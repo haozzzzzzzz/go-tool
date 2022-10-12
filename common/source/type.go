@@ -42,9 +42,11 @@ func NewBasicType(name string) *BasicType {
 
 type TagsMap map[string]string
 
+// ApiDocTagAttributes field api_doc tag
+// `api_doc:""`
 type ApiDocTagAttributes struct {
-	Skip    bool   `json:"skip"`
-	StrType string `json:"str_type"`
+	Skip    bool   `json:"skip"`     // wheter skip generate field doc
+	StrType string `json:"str_type"` // parse field type as spec str_type
 }
 
 func (m TagsMap) ApiDoc() (
@@ -80,14 +82,14 @@ func (m TagsMap) ApiDoc() (
 	return
 }
 
-// 是否跳过api文档生成
+// HasApiDocSkip whether skip generate field's doc
 func (m TagsMap) HasApiDocSkip() (isSkip bool) {
 	_, attributes := m.ApiDoc()
 	isSkip = attributes.Skip
 	return
 }
 
-// struct field
+// Field struct field
 type Field struct {
 	Name     string  `json:"name" yaml:"name"` // field name
 	TypeName string  `json:"type_name" yaml:"type_name"`
@@ -235,7 +237,7 @@ func NewMapType() *MapType {
 	}
 }
 
-// array
+// ArrayType array
 type ArrayType struct {
 	TypeClass   string `json:"type_class" yaml:"type_class"`
 	Name        string `json:"name" yaml:"name"`

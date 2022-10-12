@@ -7,7 +7,7 @@ import (
 	"go/token"
 	"go/types"
 	"golang.org/x/tools/go/packages"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"runtime/debug"
 	"sort"
@@ -127,20 +127,29 @@ func ParseApis(
 	}()
 
 	// api文件夹中所有的文件
-	subApiDir := make([]string, 0)
+	subApiDirs := make([]string, 0)
 	// TODO 需要优化。只需解析编译一次，不用每个目录都要解析编译
-	subApiDir, err = file.SearchFileNames(apiDir, func(fileInfo os.FileInfo) bool {
-		if fileInfo.IsDir() {
-			return true
-		} else {
-			return false
+	err = filepath.WalkDir(apiDir, func(path string, d fs.DirEntry, err error) error {
+		if !d.IsDir() {
+			return nil
 		}
 
-	}, true)
-	subApiDir = append(subApiDir, apiDir)
+		for _, skipDir := range SkipDirs {
+			if d.Name() == skipDir {
+				return fs.SkipDir
+			}
+		}
+
+		subApiDirs = append(subApiDirs, path)
+		return nil
+	})
+	if err != nil {
+		logrus.Errorf("walk dir failed . dir: %s, err: %s", apiDir, err)
+		return
+	}
 
 	// 服务源文件，只能一个pkg一个pkg地解析
-	for _, subApiDir := range subApiDir {
+	for _, subApiDir := range subApiDirs {
 		subCommonParamsList, subApis, errParse := ParsePkgApis(apiDir, subApiDir, parseRequestData, parseCommentText)
 		err = errParse
 		if nil != err {
@@ -195,6 +204,11 @@ func mergeTypesInfos(info *types.Info, infos ...*types.Info) {
 		// do not need to merge InitOrder
 	}
 	return
+}
+
+var SkipDirs = []string{
+	".git",
+	".idea",
 }
 
 // SkipFileNameSuffixes skip files with suffix
@@ -264,7 +278,10 @@ func ParsePkgApis(
 		packages.NeedTypes |
 		packages.NeedSyntax |
 		packages.NeedTypesInfo |
-		packages.NeedTypesSizes
+		packages.NeedTypesSizes |
+		packages.NeedModule |
+		packages.NeedEmbedFiles
+
 	pkgs, errLoad := packages.Load(&packages.Config{
 		Mode: mode,
 		Dir:  apiPackageDir,
@@ -280,6 +297,8 @@ func ParsePkgApis(
 	pkgPath := make(map[string]bool)
 	impPkgPaths := make(map[string]bool)
 	for _, pkg := range pkgs {
+		//fmt.Println(apiPackageDir, pkg)
+
 		_, ok := pkgPath[pkg.PkgPath]
 		if ok {
 			continue

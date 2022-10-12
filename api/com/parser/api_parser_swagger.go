@@ -1,4 +1,4 @@
-/**
+/*
 This package parses api items to swagger specification
 */
 package parser
@@ -84,6 +84,9 @@ func (m *SwaggerSpec) parsePathApis(path string, apis []*ApiItem) (err error) {
 	path = strings.Join(subPaths, "/")
 	pathItem := &spec.PathItem{}
 
+	// https://swagger.io/specification/v2/#parameterObject
+	// https://github.com/OAI/OpenAPI-Specification/blob/main/versions/2.0.md#items-object
+
 	for _, api := range apis {
 		operation := &spec.Operation{}
 		operation.ID = fmt.Sprintf("%s-%s", api.HttpMethod, path)
@@ -98,23 +101,33 @@ func (m *SwaggerSpec) parsePathApis(path string, apis []*ApiItem) (err error) {
 		// uri data
 		if api.UriData != nil {
 			for _, pathField := range api.UriData.Fields {
-				basicParameter := *NotBodyFieldParameter("path", pathField)
-				basicParameter.Required = true // require uri data
-				operation.Parameters = append(operation.Parameters, basicParameter)
+				params := NotBodyFieldParameters("path", pathField, nil)
+				for _, param := range params {
+					param.Required = true
+					operation.Parameters = append(operation.Parameters, *param)
+				}
 			}
 		}
 
 		// header data
 		if api.HeaderData != nil {
 			for _, headerField := range api.HeaderData.Fields {
-				operation.Parameters = append(operation.Parameters, *NotBodyFieldParameter("header", headerField))
+				params := NotBodyFieldParameters("header", headerField, nil)
+				for _, param := range params {
+					operation.Parameters = append(operation.Parameters, *param)
+				}
+
 			}
 		}
 
 		// query data
 		if api.QueryData != nil {
 			for _, queryField := range api.QueryData.Fields {
-				operation.Parameters = append(operation.Parameters, *NotBodyFieldParameter("query", queryField))
+				params := NotBodyFieldParameters("query", queryField, nil)
+				for _, param := range params {
+					operation.Parameters = append(operation.Parameters, *param)
+				}
+
 			}
 		}
 
@@ -213,22 +226,22 @@ func (m *SwaggerSpec) parsePathApis(path string, apis []*ApiItem) (err error) {
 	return
 }
 
-// set apis for building swagger spec
+// Apis set apis for building swagger spec
 func (m *SwaggerSpec) Apis(apis []*ApiItem) {
 	m.apis = apis
 }
 
-// set swagger host params
+// Host set swagger host params
 func (m *SwaggerSpec) Host(host string) {
 	m.Swagger.Host = host
 }
 
-// set swagger schemes params
+// Schemes set swagger schemes params
 func (m *SwaggerSpec) Schemes(schemes []string) {
 	m.Swagger.Schemes = schemes
 }
 
-// set swagger info params
+// Info set swagger info params
 func (m *SwaggerSpec) Info(
 	title string,
 	description string,
@@ -255,16 +268,57 @@ func (m *SwaggerSpec) setDefinitions() {
 	return
 }
 
-// save swagger spec to file
+// SaveToFile save swagger spec to file
 func (m *SwaggerSpec) SaveToFile(fileName string, pretty bool) (err error) {
 	return m.Swagger.SaveFile(fileName, pretty)
 }
 
-// 非body里声明的类型参数
+// NotBodyFieldParameters 非body里声明的类型参数
 // https://swagger.io/specification/v2/#parameterObject
-func NotBodyFieldParameter(in string, field *source.Field) (parameter *spec.Parameter) {
-	items := ITypeToSwaggerNotBodyItemsObject(field.TypeSpec)
+// https://github.com/OAI/OpenAPI-Specification/blob/main/versions/2.0.md#items-object
+func NotBodyFieldParameters(
+	in string,
+	field *source.Field,
+	fieldTypeStack []source.IType, // 字段类型解析栈, 避免环形解析
+) (parameters []*spec.Parameter) {
+	if fieldTypeStack == nil {
+		fieldTypeStack = make([]source.IType, 0)
+	}
 
+	// 检查是否有循环引用的类型
+	hasITypeLoop := false
+	for _, stackType := range fieldTypeStack {
+		if stackType == field.TypeSpec {
+			hasITypeLoop = true
+			break
+		}
+	}
+
+	if hasITypeLoop {
+		logrus.Warnf("swagger pase params field exit because found ref loop . field : %+v, stack: %+v", field, fieldTypeStack)
+		return
+	}
+
+	fieldTypeStack = append(fieldTypeStack, field.TypeSpec)
+
+	parameters = make([]*spec.Parameter, 0)
+	switch typeSpec := field.TypeSpec.(type) {
+	case *source.StructType: // params embedded in struct
+		for _, subField := range typeSpec.Fields {
+			parameters = append(parameters, NotBodyFieldParameters(in, subField, fieldTypeStack)...)
+		}
+
+	default: // basic type or array
+		param := BasicITypeToSwaggerParameter(in, field)
+		parameters = append(parameters, param)
+
+	}
+
+	return
+}
+
+func BasicITypeToSwaggerParameter(in string, field *source.Field) (parameter *spec.Parameter) {
+	items := BasicITypeToSwaggerNotBodyItemsObject(field.TypeSpec)
 	parameter = &spec.Parameter{
 		CommonValidations: items.CommonValidations,
 		SimpleSchema:      items.SimpleSchema,
@@ -276,29 +330,30 @@ func NotBodyFieldParameter(in string, field *source.Field) (parameter *spec.Para
 			Required:    field.Required(),
 		},
 	}
-
 	return
 }
 
-func ITypeToSwaggerNotBodyItemsObject(iType source.IType) (items *spec.Items) {
-	items = spec.NewItems()
+// BasicITypeToSwaggerNotBodyItemsObject array or basic type to spec parameter item
+func BasicITypeToSwaggerNotBodyItemsObject(iType source.IType) (items *spec.Items) {
 	switch fieldType := iType.(type) {
 	case *source.ArrayType:
+		items = spec.NewItems()
 		items.Type = "array"
-		items.Items = ITypeToSwaggerNotBodyItemsObject(fieldType.EltSpec)
+		items.Items = BasicITypeToSwaggerNotBodyItemsObject(fieldType.EltSpec)
 
 	case *source.BasicType:
+		items = spec.NewItems()
 		items.Type = BasicTypeToSwaggerSchemaType(fieldType.TypeName())
 
 	default:
-		logrus.Warnf("not-in-body items type %s has not supported yet", iType)
+		logrus.Warnf("not-in-body items type %+v has not supported yet", iType)
 
 	}
 
 	return
 }
 
-// transform basic type to swagger schema type
+// BasicTypeToSwaggerSchemaType transform basic type to swagger schema type
 func BasicTypeToSwaggerSchemaType(fieldType string) (swagType string) {
 	switch fieldType {
 	case "string":
@@ -331,7 +386,7 @@ func NewITypeSwaggerSchemaConverter() *ITypeSwaggerSchemaConverter {
 
 func (m *ITypeSwaggerSchemaConverter) ToSwaggerSchema(
 	iType source.IType,
-	fieldTypeStack []source.IType, // 字段类型解析栈
+	fieldTypeStack []source.IType, // 字段类型解析栈, 避免环形解析
 ) (
 	schema *spec.Schema,
 ) {
